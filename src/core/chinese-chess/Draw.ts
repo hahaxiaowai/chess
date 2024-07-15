@@ -9,25 +9,25 @@ import {
   DoubleSide,
   ExtrudeGeometry,
   Group,
-  InstancedMesh,
-  Line,
-  LineBasicMaterial,
   Material,
-  Matrix4,
   Mesh,
   MeshBasicMaterial,
   MeshPhongMaterial,
+  MeshPhysicalMaterial,
   PerspectiveCamera,
   PlaneGeometry,
   Scene,
   Shape,
+  ShapeGeometry,
   Vector3,
   WebGLRenderer,
 } from "three";
 import {
   BufferGeometryUtils,
   OrbitControls,
+  SVGLoader,
 } from "three/examples/jsm/Addons.js";
+import svg from "./svg";
 export default class Draw {
   scene: Scene;
   camera: Camera;
@@ -73,7 +73,7 @@ export default class Draw {
     );
     // camera.updateProjectionMatrix();
     scene.add(camera);
-    camera.position.set(0, 100, 0);
+    camera.position.set(0, 15, 0);
     scene.add(new AmbientLight("rgb(255,255,255)"));
     const light = new DirectionalLight("rgb(255,255,255)", 1);
     light.position.set(50, 200, 100);
@@ -267,10 +267,10 @@ export default class Draw {
       }
     }
   }
-  drawChess() {
+  drawChess(type: ChessTypes, camp: ChessTypes) {
     // 如果角度为2*Math.PI,会在开启bevelEnabled:true时导致圆柱没有完整闭合
     // 这可能是精度造成的问题，所以这里设置为1.99避免这个问题
-    const shape = new Shape().absarc(0, 0, 3, 1.99 * Math.PI, 0, true);
+    const shape = new Shape().absarc(0, 0, 4, 1.99 * Math.PI, 0, true);
     const extrudeSettings = {
       curveSegments: 24,
       steps: 1,
@@ -284,7 +284,40 @@ export default class Draw {
     geometry.rotateX(-Math.PI / 2);
     const material = new MeshPhongMaterial({ color: "rgb(239,194,127)" });
     const mesh = new Mesh(geometry, material);
-    mesh.position.set(0, 0.31, 15);
+    // mesh.position.set(0, 0.31, 15);
     this.chessGroup.add(mesh);
+    // 字
+    const textMaterial = new MeshPhongMaterial({
+      color: new Color(camp),
+      side: DoubleSide,
+    });
+    const loader = new SVGLoader();
+    loader.load(svg[type], (data) => {
+      const paths = data.paths;
+      const extrudeSettings = {
+        curveSegments: 24,
+        steps: 1,
+        depth: 50,
+        bevelEnabled: true,
+        bevelThickness: 0.3,
+        bevelSize: 0.3,
+        bevelSegments: 6,
+      };
+      const geometries = [];
+      for (let i = 0; i < paths.length; i++) {
+        const shapes = SVGLoader.createShapes(paths[i]);
+        for (let j = 0; j < shapes.length; j++) {
+          const geometry = new ExtrudeGeometry(shapes[j], extrudeSettings);
+          geometries.push(geometry);
+        }
+      }
+      const geometry = BufferGeometryUtils.mergeGeometries(geometries);
+      geometry.translate(-1008.5 / 2, -1008.5 / 2, 0);
+      geometry.rotateX(Math.PI / 2);
+      geometry.scale(0.0088, 0.0088, 0.0088);
+      const textMesh = new Mesh(geometry, textMaterial);
+      textMesh.position.set(0, 2.4, 0);
+      mesh.add(textMesh);
+    });
   }
 }

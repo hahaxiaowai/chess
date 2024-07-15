@@ -2,12 +2,16 @@ import Draw from "./Draw";
 
 class Chess {
   draw: Draw;
-  constructor(d: Draw) {
+  type: ChessTypes;
+  camp: ChessCamp;
+  constructor(type: ChessTypes, camp: ChessCamp, d: Draw) {
     this.draw = d;
+    this.type = type;
+    this.camp = camp;
     this.initChess();
   }
   initChess() {
-    this.draw.drawChess();
+    this.draw.drawChess(this.type, this.camp);
   }
   getMoveRange() {}
   move() {}
@@ -15,9 +19,9 @@ class Chess {
 }
 
 class General extends Chess {
-  constructor(d: Draw) {
-    super(d);
+  constructor(type: ChessTypes, camp: ChessCamp, d: Draw) {
+    super(type, camp, d);
   }
-  initChess(): void {}
+  // initChess(): void {}
 }
 export { Chess, General };

@@ -1,5 +1,5 @@
 import Draw from "./Draw";
-import { Chess } from "./Chess";
+import { Chess, General } from "./Chess";
 interface BoardOption {
   id: string;
   chessOption: object;
@@ -19,7 +19,7 @@ class Board {
     this.draw.drawBoard();
   }
   initChess(option: object) {
-    this.redChesses.push(new Chess(this.draw));
+    this.redChesses.push(new General("帅", "red", this.draw));
   }
   judgeRule() {}
 }
