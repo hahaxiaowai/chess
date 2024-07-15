@@ -7,11 +7,14 @@ interface BoardOption {
 class Board {
   draw: Draw;
   chesses: Chess[];
+  chessMap: Map<string, Chess>;
   constructor(option: BoardOption) {
     this.draw = new Draw(option.id);
     this.initBoard(option);
     this.chesses = [];
+    this.chessMap = new Map();
     this.initChess(option.chessOption);
+    this.initEvent();
   }
   initBoard(option: BoardOption) {
     this.draw.drawBoard();
@@ -184,8 +187,36 @@ class Board {
         })
       );
     }
+    // Map
+    for (let i = 0; i < this.chesses.length; i++) {
+      this.chessMap.set(this.chesses[i].name, this.chesses[i]);
+    }
   }
-  judgeRule() {}
+  initEvent() {
+    // 这里有点绕，仅是为了让draw不参与业务逻辑，仅实现绘制逻辑
+    const cb = (chess: string | Chess) => {
+      this.showMoveRange(chess);
+    };
+    this.draw.initEvent(cb);
+  }
+  move(chess: string | Chess, position: [number, number]) {
+    if (typeof chess === "string") {
+      if (this.chessMap.has(chess)) {
+        this.chessMap.get(chess)?.move(position);
+      }
+    } else {
+      chess.move(position);
+    }
+  }
+  showMoveRange(chess: string | Chess) {
+    if (typeof chess === "string") {
+      if (this.chessMap.has(chess)) {
+        this.chessMap.get(chess)?.getMoveRange();
+      }
+    } else {
+      chess.getMoveRange();
+    }
+  }
 }
 
 export default Board;

@@ -17,9 +17,11 @@ import {
   OrthographicCamera,
   PerspectiveCamera,
   PlaneGeometry,
+  Raycaster,
   Scene,
   Shape,
   ShapeGeometry,
+  Vector2,
   Vector3,
   WebGLRenderer,
 } from "three";
@@ -29,6 +31,7 @@ import {
   SVGLoader,
 } from "three/examples/jsm/Addons.js";
 import svg from "./svg";
+import { Chess } from "./Chess";
 export default class Draw {
   scene: Scene;
   camera: Camera;
@@ -112,6 +115,24 @@ export default class Draw {
       boardGroup,
       chessGroup,
     };
+  }
+  initEvent(cb: { (chess: string | Chess): void; (arg0: string): void }) {
+    console.log(this.renderer.domElement.height);
+    const raycaster = new Raycaster();
+    const mouse = new Vector2(1, 1);
+    this.renderer.domElement.addEventListener("click", (e) => {
+      e.preventDefault();
+      // mouse.x = (e.clientX / this.renderer.domElement.width) * 2 - 1;
+      // mouse.y = -(e.clientY / this.renderer.domElement.height) * 2 + 1;
+
+      mouse.x = (e.offsetX / this.renderer.domElement.offsetWidth) * 2 - 1;
+      mouse.y = -(e.offsetY / this.renderer.domElement.offsetHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, this.camera);
+      const intersection = raycaster.intersectObject(this.chessGroup);
+      if (intersection[0]) {
+        cb(intersection[0].object.name);
+      }
+    });
   }
   drawBoard() {
     // 此步骤可以考虑用性能更好的方式
@@ -314,6 +335,7 @@ export default class Draw {
       geometry.scale(0.0088, 0.0088, 0.0088);
       const textMesh = new Mesh(geometry, textMaterial);
       textMesh.position.set(0, 2.4, 0);
+      textMesh.name = name;
       mesh.add(textMesh);
     });
   }
