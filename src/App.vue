@@ -1,23 +1,18 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
+import Board from './core/chinese-chess'
+onMounted(() => {
+  const board = new Board({ id: 'chess' })
+})
 </script>
 
 <template>
-  象棋
+  <div id="chess"></div>
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+#chess {
+  width: 100vw;
+  height: 100vh;
 }
 </style>
