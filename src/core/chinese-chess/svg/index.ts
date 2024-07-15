@@ -10,7 +10,7 @@ import xiang2 from "./xiang2.svg";
 import shi from "./shi.svg";
 import shi2 from "./shi2.svg";
 export default {
-  帅: shuai,
+  帥: shuai,
   将: jiang,
   兵: bing,
   卒: zu,

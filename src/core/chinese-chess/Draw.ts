@@ -14,6 +14,7 @@ import {
   MeshBasicMaterial,
   MeshPhongMaterial,
   MeshPhysicalMaterial,
+  OrthographicCamera,
   PerspectiveCamera,
   PlaneGeometry,
   Scene,
@@ -37,6 +38,7 @@ export default class Draw {
   lineWidth: number;
   _lineMaterial: Material;
   chessGroup: Group;
+  _chessMap: Map<string, Mesh>;
   constructor(id: string) {
     const { scene, camera, renderer, controls, boardGroup, chessGroup } =
       this.initScene(id);
@@ -46,6 +48,7 @@ export default class Draw {
     this.controls = controls;
     this.boardGroup = boardGroup;
     this.chessGroup = chessGroup;
+    this._chessMap = new Map();
     this.lineWidth = 0.2;
     this._lineMaterial = new MeshBasicMaterial({
       color: "rgb(0,0,0)",
@@ -57,23 +60,17 @@ export default class Draw {
     if (!container) throw new Error("pass container id");
     const scene = new Scene();
     scene.background = new Color("rgb(200,200,200)");
-    // const camera = new OrthographicCamera(
-    //   container.offsetWidth / -2,
-    //   container.offsetWidth / 2,
-    //   container.offsetHeight / 2,
-    //   container.offsetHeight / -2,
-    //   1,
-    //   10000
-    // );
+
     const camera = new PerspectiveCamera(
-      50,
+      60,
       window.innerWidth / window.innerHeight,
       1,
       1000
     );
-    // camera.updateProjectionMatrix();
+    camera.updateProjectionMatrix();
     scene.add(camera);
-    camera.position.set(0, 15, 0);
+    camera.rotateY(Math.PI);
+    camera.position.set(0, 85, 55);
     scene.add(new AmbientLight("rgb(255,255,255)"));
     const light = new DirectionalLight("rgb(255,255,255)", 1);
     light.position.set(50, 200, 100);
@@ -125,17 +122,17 @@ export default class Draw {
     this._drawCrossFlower();
   }
   _drawBackground() {
-    const material = new MeshBasicMaterial({
+    const material = new MeshPhongMaterial({
       color: "rgb(239,194,127)",
       side: DoubleSide,
     });
-    const geometry = new PlaneGeometry(110, 120);
+    const geometry = new BoxGeometry(110, 120, 2);
     geometry.rotateX(-Math.PI / 2);
-    // geometry.rotateZ(Math.PI / 2);
     const mesh = new Mesh(geometry, material);
+    mesh.position.set(0, -1.3, 0);
     mesh.name = "bg";
     const box = new BoxGeometry(1, 1, 1);
-    const material2 = new MeshBasicMaterial({
+    const material2 = new MeshPhongMaterial({
       color: "rgb(100,0,100)",
       side: DoubleSide,
     });
@@ -144,8 +141,6 @@ export default class Draw {
     this.boardGroup.add(mesh);
   }
   _drawLine() {
-    // const points = [new Vector3(-0.5, 0, 0), new Vector3(0.5, 0, 0)];
-    // const geometry = new BufferGeometry().setFromPoints(points);
     // 用plane代替line，绘制非1像素的线
     const geometry = new PlaneGeometry(1, 1);
     geometry.rotateX(-Math.PI / 2);
@@ -267,7 +262,7 @@ export default class Draw {
       }
     }
   }
-  drawChess(type: ChessTypes, camp: ChessTypes) {
+  drawChess(type: ChessTypes, camp: ChessCamp, name: string) {
     // 如果角度为2*Math.PI,会在开启bevelEnabled:true时导致圆柱没有完整闭合
     // 这可能是精度造成的问题，所以这里设置为1.99避免这个问题
     const shape = new Shape().absarc(0, 0, 4, 1.99 * Math.PI, 0, true);
@@ -281,10 +276,12 @@ export default class Draw {
       bevelSegments: 6,
     };
     const geometry = new ExtrudeGeometry(shape, extrudeSettings);
+    // geometry.translate(0, 0, 0.3);
     geometry.rotateX(-Math.PI / 2);
     const material = new MeshPhongMaterial({ color: "rgb(239,194,127)" });
     const mesh = new Mesh(geometry, material);
-    // mesh.position.set(0, 0.31, 15);
+    mesh.name = name;
+    this._chessMap.set(name, mesh);
     this.chessGroup.add(mesh);
     // 字
     const textMaterial = new MeshPhongMaterial({
@@ -319,5 +316,16 @@ export default class Draw {
       textMesh.position.set(0, 2.4, 0);
       mesh.add(textMesh);
     });
+  }
+  setPosition(name: string, position: [number, number]) {
+    const newPosition = new Vector3(
+      position[0] * 10 - 40,
+      0,
+      -position[1] * 10 + 45
+    );
+    if (this._chessMap.has(name))
+      this._chessMap
+        .get(name)
+        ?.position.set(newPosition.x, newPosition.y, newPosition.z);
   }
 }
