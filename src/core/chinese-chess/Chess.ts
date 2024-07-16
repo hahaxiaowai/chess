@@ -23,7 +23,7 @@ class Chess {
     this.position = [0, 0];
     this.moveRange = [];
     this.index = option.index;
-    this.name = this.type + "_" + this.index;
+    this.name = this.camp + "_" + this.type + "_" + this.index;
     this.initChess();
   }
   initChess() {
@@ -31,7 +31,9 @@ class Chess {
     this.draw.setPosition(this.name, this.position);
   }
   // 返回不限制移动范围
-  getMoveRange() {}
+  getMoveRange(): number[][] {
+    return [];
+  }
   // 返回限制移动范围
   getFilterMoveRange(chessPostions: [[number, number]]) {}
   move(position: [number, number]) {
@@ -53,20 +55,20 @@ class Jiang extends Chess {
   }
   getMoveRange(): number[][] {
     // 只能在九宫格走
-    // 范围是x:4~6 y:0~2 | 7~9
+    // 范围是x:3~5 y:0~2 | 7~9
     // 可移动情况较少，所以直接穷举出来
     const res = [];
     const x = this.position[0];
     const y = this.position[1];
     // 横向
     switch (x) {
-      case 4:
-      case 6:
-        res.push([5, y]);
-        break;
+      case 3:
       case 5:
         res.push([4, y]);
-        res.push([6, y]);
+        break;
+      case 4:
+        res.push([3, y]);
+        res.push([5, y]);
         break;
       default:
         break;
@@ -107,22 +109,22 @@ class Shi extends Chess {
   }
   getMoveRange(): number[][] {
     // 只能在九宫格走
-    // 范围是x:4~6 y:0~2 | 7~9
+    // 范围是x:3~5 y:0~2 | 7~9
     // 可移动情况较少，所以直接穷举出来
     const res = [];
     const x = this.position[0];
     const y = this.position[1];
 
     switch (x) {
-      case 4:
-      case 6:
-        res.push([5, this.camp === "red" ? 1 : 8]);
-        break;
+      case 3:
       case 5:
-        res.push([4, y + 1]);
-        res.push([4, y - 1]);
-        res.push([6, y + 1]);
-        res.push([6, y - 1]);
+        res.push([4, this.camp === "red" ? 1 : 8]);
+        break;
+      case 4:
+        res.push([3, y + 1]);
+        res.push([3, y - 1]);
+        res.push([5, y + 1]);
+        res.push([5, y - 1]);
         break;
       default:
         break;
@@ -183,6 +185,29 @@ class Ma extends Chess {
     }
     this.move(this.position);
   }
+  getMoveRange(): number[][] {
+    // 仅考虑正常的可移动位置，不考虑蹩马腿的情况
+    // 可移动情况较少，所以直接穷举出来
+    const res = [];
+    const x = this.position[0];
+    const y = this.position[1];
+    res.push([x + 2, y + 1]);
+    res.push([x + 2, y - 1]);
+    res.push([x - 2, y + 1]);
+    res.push([x - 2, y - 1]);
+    res.push([x + 1, y + 2]);
+    res.push([x + 1, y - 2]);
+    res.push([x - 1, y + 2]);
+    res.push([x - 1, y - 2]);
+
+    return res.filter(
+      (position) =>
+        position[0] >= 0 &&
+        position[0] <= 8 &&
+        position[1] >= 0 &&
+        position[1] <= 9
+    );
+  }
 }
 class Ju extends Chess {
   constructor(option: ChessOption) {
@@ -193,6 +218,18 @@ class Ju extends Chess {
       this.position = this.index ? [8, 9] : [0, 9];
     }
     this.move(this.position);
+  }
+  getMoveRange(): number[][] {
+    const res = [];
+    const x = this.position[0];
+    const y = this.position[1];
+    for (let i = 0; i < 10; i++) {
+      if (i !== y) res.push([x, i]);
+    }
+    for (let i = 0; i < 9; i++) {
+      if (i !== x) res.push([i, y]);
+    }
+    return res;
   }
 }
 class Pao extends Chess {
@@ -205,6 +242,18 @@ class Pao extends Chess {
     }
     this.move(this.position);
   }
+  getMoveRange(): number[][] {
+    const res = [];
+    const x = this.position[0];
+    const y = this.position[1];
+    for (let i = 0; i < 10; i++) {
+      if (i !== y) res.push([x, i]);
+    }
+    for (let i = 0; i < 9; i++) {
+      if (i !== x) res.push([i, y]);
+    }
+    return res;
+  }
 }
 class Bing extends Chess {
   constructor(option: ChessOption) {
@@ -215,6 +264,25 @@ class Bing extends Chess {
       this.position = [this.index * 2, 6];
     }
     this.move(this.position);
+  }
+  getMoveRange(): number[][] {
+    const res = [];
+    const x = this.position[0];
+    const y = this.position[1];
+    if (this.camp === "red") {
+      if (y <= 8) res.push([x, y + 1]);
+      if (y > 4) {
+        if (x !== 8) res.push([x + 1, y]);
+        if (x !== 0) res.push([x - 1, y]);
+      }
+    } else {
+      if (y >= 1) res.push([x, y - 1]);
+      if (y <= 4) {
+        if (x !== 8) res.push([x + 1, y]);
+        if (x !== 0) res.push([x - 1, y]);
+      }
+    }
+    return res;
   }
 }
 export { Chess, Jiang, Shi, Xiang, Ma, Ju, Pao, Bing };

@@ -8,6 +8,7 @@ class Board {
   draw: Draw;
   chesses: Chess[];
   chessMap: Map<string, Chess>;
+  activeChess?: Chess;
   constructor(option: BoardOption) {
     this.draw = new Draw(option.id);
     this.initBoard(option);
@@ -194,8 +195,13 @@ class Board {
   }
   initEvent() {
     // 这里有点绕，仅是为了让draw不参与业务逻辑，仅实现绘制逻辑
-    const cb = (chess: string | Chess) => {
-      this.showMoveRange(chess);
+    // 可以考虑把draw.initEvent提到Board里
+    const cb = (obj: string | Chess, position?: [number, number]) => {
+      if (obj === "range" && this.activeChess && position) {
+        this.move(this.activeChess, position);
+      } else {
+        this.showMoveRange(obj);
+      }
     };
     this.draw.initEvent(cb);
   }
@@ -207,15 +213,21 @@ class Board {
     } else {
       chess.move(position);
     }
+    this.draw.clearRange();
   }
   showMoveRange(chess: string | Chess) {
+    console.log(chess);
+    let res: number[][] = [];
     if (typeof chess === "string") {
       if (this.chessMap.has(chess)) {
-        this.chessMap.get(chess)?.getMoveRange();
+        res = this.chessMap.get(chess)?.getMoveRange() || [];
+        this.activeChess = this.chessMap.get(chess);
       }
     } else {
-      chess.getMoveRange();
+      res = chess.getMoveRange();
+      this.activeChess = chess;
     }
+    this.draw.showRange(res);
   }
 }
 

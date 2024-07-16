@@ -42,6 +42,7 @@ export default class Draw {
   _lineMaterial: Material;
   chessGroup: Group;
   _chessMap: Map<string, Mesh>;
+  _rangeGroup: Group;
   constructor(id: string) {
     const { scene, camera, renderer, controls, boardGroup, chessGroup } =
       this.initScene(id);
@@ -51,6 +52,8 @@ export default class Draw {
     this.controls = controls;
     this.boardGroup = boardGroup;
     this.chessGroup = chessGroup;
+    this._rangeGroup = new Group();
+    this.scene.add(this._rangeGroup);
     this._chessMap = new Map();
     this.lineWidth = 0.2;
     this._lineMaterial = new MeshBasicMaterial({
@@ -122,15 +125,20 @@ export default class Draw {
     const mouse = new Vector2(1, 1);
     this.renderer.domElement.addEventListener("click", (e) => {
       e.preventDefault();
-      // mouse.x = (e.clientX / this.renderer.domElement.width) * 2 - 1;
-      // mouse.y = -(e.clientY / this.renderer.domElement.height) * 2 + 1;
-
       mouse.x = (e.offsetX / this.renderer.domElement.offsetWidth) * 2 - 1;
       mouse.y = -(e.offsetY / this.renderer.domElement.offsetHeight) * 2 + 1;
       raycaster.setFromCamera(mouse, this.camera);
-      const intersection = raycaster.intersectObject(this.chessGroup);
-      if (intersection[0]) {
-        cb(intersection[0].object.name);
+      const rangeIntersection = raycaster.intersectObject(this._rangeGroup);
+      if (rangeIntersection[0]) {
+        cb(
+          rangeIntersection[0].object.name,
+          rangeIntersection[0].object.userData.position
+        );
+      } else {
+        const intersection = raycaster.intersectObject(this.chessGroup);
+        if (intersection[0]) {
+          cb(intersection[0].object.name);
+        }
       }
     });
   }
@@ -340,7 +348,7 @@ export default class Draw {
     });
   }
   setPosition(name: string, position: [number, number]) {
-    const newPosition = new Vector3(
+    const threePosition = new Vector3(
       position[0] * 10 - 40,
       0,
       -position[1] * 10 + 45
@@ -348,6 +356,33 @@ export default class Draw {
     if (this._chessMap.has(name))
       this._chessMap
         .get(name)
-        ?.position.set(newPosition.x, newPosition.y, newPosition.z);
+        ?.position.set(threePosition.x, threePosition.y, threePosition.z);
+  }
+  showRange(position: number[][]) {
+    this._rangeGroup.clear();
+    const material = new MeshBasicMaterial({
+      color: new Color("green"),
+      side: DoubleSide,
+      opacity: 0.5,
+      transparent: true,
+    });
+    const geometry = new PlaneGeometry(5, 5);
+    geometry.rotateX(Math.PI / 2);
+    const mesh = new Mesh(geometry, material);
+    mesh.name = "range";
+    for (let i = 0; i < position.length; i++) {
+      const pMesh = mesh.clone();
+      const threePosition = new Vector3(
+        position[i][0] * 10 - 40,
+        0,
+        -position[i][1] * 10 + 45
+      );
+      pMesh.userData.position = position[i];
+      pMesh.position.set(threePosition.x, 4, threePosition.z);
+      this._rangeGroup.add(pMesh);
+    }
+  }
+  clearRange() {
+    this._rangeGroup.clear();
   }
 }
