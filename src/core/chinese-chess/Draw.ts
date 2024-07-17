@@ -294,7 +294,7 @@ export default class Draw {
       }
     }
   }
-  drawChess(type: ChessTypes, camp: ChessCamp, name: string) {
+  drawChess(type: ChessType, camp: ChessCamp, name: string) {
     // 如果角度为2*Math.PI,会在开启bevelEnabled:true时导致圆柱没有完整闭合
     // 这可能是精度造成的问题，所以这里设置为1.99避免这个问题
     const shape = new Shape().absarc(0, 0, 4, 1.99 * Math.PI, 0, true);
@@ -361,7 +361,7 @@ export default class Draw {
         .get(name)
         ?.position.set(threePosition.x, threePosition.y, threePosition.z);
   }
-  showRangeAndTarget(position: number[][], targets: Chess[]) {
+  showRangeAndTarget(position: number[][], target: Chess[]) {
     this._rangeGroup.clear();
     const material = new MeshBasicMaterial({
       color: new Color("green"),
@@ -392,7 +392,7 @@ export default class Draw {
     }
     const targetMesh = new Mesh(geometry, targetMaterial);
     targetMesh.name = "target";
-    for (let i = 0; i < targets.length; i++) {
+    for (let i = 0; i < target.length; i++) {
       const pMesh = mesh.clone();
       const threePosition = new Vector3(
         position[i][0] * 10 - 40,

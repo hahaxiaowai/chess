@@ -6,13 +6,13 @@ interface BoardOption {
 }
 class Board {
   draw: Draw;
-  chesses: Chess[];
+  chessArray: Chess[];
   chessMap: Map<string, Chess>;
   activeChess?: Chess;
   constructor(option: BoardOption) {
     this.draw = new Draw(option.id);
     this.initBoard(option);
-    this.chesses = [];
+    this.chessArray = [];
     this.chessMap = new Map();
     this.initChess(option.chessOption);
     this.initEvent();
@@ -22,7 +22,7 @@ class Board {
   }
   initChess(option: object) {
     // 帥，将
-    this.chesses.push(
+    this.chessArray.push(
       new Jiang({
         type: "帥",
         camp: "red",
@@ -37,7 +37,7 @@ class Board {
       })
     );
     // 仕，士
-    this.chesses.push(
+    this.chessArray.push(
       new Shi({
         type: "仕",
         camp: "red",
@@ -64,7 +64,7 @@ class Board {
       })
     );
     // 相，象
-    this.chesses.push(
+    this.chessArray.push(
       new Xiang({
         type: "相",
         camp: "red",
@@ -91,7 +91,7 @@ class Board {
       })
     );
     // 馬
-    this.chesses.push(
+    this.chessArray.push(
       new Ma({
         type: "馬",
         camp: "red",
@@ -118,7 +118,7 @@ class Board {
       })
     );
     // 車
-    this.chesses.push(
+    this.chessArray.push(
       new Ju({
         type: "車",
         camp: "red",
@@ -145,7 +145,7 @@ class Board {
       })
     );
     // 炮
-    this.chesses.push(
+    this.chessArray.push(
       new Pao({
         type: "炮",
         camp: "red",
@@ -173,7 +173,7 @@ class Board {
     );
     // 兵
     for (let i = 0; i < 5; i++) {
-      this.chesses.push(
+      this.chessArray.push(
         new Bing({
           type: "兵",
           camp: "red",
@@ -189,8 +189,8 @@ class Board {
       );
     }
     // Map
-    for (let i = 0; i < this.chesses.length; i++) {
-      this.chessMap.set(this.chesses[i].name, this.chesses[i]);
+    for (let i = 0; i < this.chessArray.length; i++) {
+      this.chessMap.set(this.chessArray[i].name, this.chessArray[i]);
     }
   }
   initEvent() {
@@ -230,21 +230,21 @@ class Board {
       c = chess;
     }
     res = c.getMoveRange();
-    const { moveRange, targets } = c.getFilterMoveRange(
+    const { moveRange, target } = c.getFilterMoveRange(
       res,
-      this._getChessesByPositions(res)
+      this._getChessByPosition(res)
     );
     res = moveRange;
     this.activeChess = c;
-    this.draw.showRangeAndTarget(res, targets);
+    this.draw.showRangeAndTarget(res, target);
   }
-  _getChessesByPositions(position: number[][]) {
+  _getChessByPosition(position: number[][]) {
     const strPosition = position.map((p) => p.toString());
     const res: Chess[] = [];
-    for (let i = 0; i < this.chesses.length; i++) {
-      const strP = this.chesses[i].position.toString();
+    for (let i = 0; i < this.chessArray.length; i++) {
+      const strP = this.chessArray[i].position.toString();
       if (strPosition.includes(strP)) {
-        res.push(this.chesses[i]);
+        res.push(this.chessArray[i]);
       }
     }
     return res;

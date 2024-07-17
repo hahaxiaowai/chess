@@ -1,4 +1,4 @@
-// declare enum ChessTypes {
+// declare enum ChessType {
 //   "帅" = "帅",
 //   "将" = "将",
 //   "兵" = "兵",
@@ -11,7 +11,7 @@
 //   "仕" = "仕",
 //   "士" = "士",
 // }
-declare type ChessTypes =
+declare type ChessType =
   | "帥"
   | "将"
   | "仕"

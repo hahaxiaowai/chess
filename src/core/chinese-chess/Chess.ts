@@ -1,7 +1,7 @@
 import Draw from "./Draw";
 
 interface ChessOption {
-  type: ChessTypes;
+  type: ChessType;
   camp: ChessCamp;
   draw: Draw;
   index: number;
@@ -9,7 +9,7 @@ interface ChessOption {
 
 class Chess {
   draw: Draw;
-  type: ChessTypes;
+  type: ChessType;
   camp: ChessCamp;
   name: string;
   position: [number, number];
@@ -37,10 +37,10 @@ class Chess {
   // 返回限制移动范围
   getFilterMoveRange(
     moveRange: number[][],
-    chesses: Chess[]
-  ): { moveRange: number[][]; targets: Chess[] } {
+    chess: Chess[]
+  ): { moveRange: number[][]; target: Chess[] } {
     // 返回两个数组，一个是可移动范围，一个是攻击目标
-    return { moveRange, targets: chesses };
+    return { moveRange, target: chess };
   }
   move(position: [number, number]) {
     this.position = position;
