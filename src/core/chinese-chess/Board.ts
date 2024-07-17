@@ -217,17 +217,37 @@ class Board {
   }
   showMoveRange(chess: string | Chess) {
     console.log(chess);
+    let c: Chess;
     let res: number[][] = [];
+
     if (typeof chess === "string") {
       if (this.chessMap.has(chess)) {
-        res = this.chessMap.get(chess)?.getMoveRange() || [];
-        this.activeChess = this.chessMap.get(chess);
+        c = this.chessMap.get(chess)!;
+      } else {
+        return;
       }
     } else {
-      res = chess.getMoveRange();
-      this.activeChess = chess;
+      c = chess;
     }
-    this.draw.showRange(res);
+    res = c.getMoveRange();
+    const { moveRange, targets } = c.getFilterMoveRange(
+      res,
+      this._getChessesByPositions(res)
+    );
+    res = moveRange;
+    this.activeChess = c;
+    this.draw.showRangeAndTarget(res, targets);
+  }
+  _getChessesByPositions(position: number[][]) {
+    const strPosition = position.map((p) => p.toString());
+    const res: Chess[] = [];
+    for (let i = 0; i < this.chesses.length; i++) {
+      const strP = this.chesses[i].position.toString();
+      if (strPosition.includes(strP)) {
+        res.push(this.chesses[i]);
+      }
+    }
+    return res;
   }
 }
 

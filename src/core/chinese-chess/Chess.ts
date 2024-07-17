@@ -35,7 +35,13 @@ class Chess {
     return [];
   }
   // 返回限制移动范围
-  getFilterMoveRange(chessPostions: [[number, number]]) {}
+  getFilterMoveRange(
+    moveRange: number[][],
+    chesses: Chess[]
+  ): { moveRange: number[][]; targets: Chess[] } {
+    // 返回两个数组，一个是可移动范围，一个是攻击目标
+    return { moveRange, targets: chesses };
+  }
   move(position: [number, number]) {
     this.position = position;
     this.draw.setPosition(this.name, this.position);
@@ -95,6 +101,11 @@ class Jiang extends Chess {
         break;
     }
     return res;
+  }
+  getFilterMoveRange(moveRange: number[][], chesses: Chess[]): number[][] {
+    console.log(moveRange, chesses);
+    // 返回两个数组，一个是可移动范围，一个是攻击目标
+    return [];
   }
 }
 class Shi extends Chess {

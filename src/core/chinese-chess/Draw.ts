@@ -119,7 +119,10 @@ export default class Draw {
       chessGroup,
     };
   }
-  initEvent(cb: { (chess: string | Chess): void; (arg0: string): void }) {
+  initEvent(cb: {
+    (chess: string | Chess, position?: [number, number]): void;
+    (arg0: string): void;
+  }) {
     console.log(this.renderer.domElement.height);
     const raycaster = new Raycaster();
     const mouse = new Vector2(1, 1);
@@ -358,10 +361,16 @@ export default class Draw {
         .get(name)
         ?.position.set(threePosition.x, threePosition.y, threePosition.z);
   }
-  showRange(position: number[][]) {
+  showRangeAndTarget(position: number[][], targets: Chess[]) {
     this._rangeGroup.clear();
     const material = new MeshBasicMaterial({
       color: new Color("green"),
+      side: DoubleSide,
+      opacity: 0.5,
+      transparent: true,
+    });
+    const targetMaterial = new MeshBasicMaterial({
+      color: new Color("red"),
       side: DoubleSide,
       opacity: 0.5,
       transparent: true,
@@ -371,6 +380,19 @@ export default class Draw {
     const mesh = new Mesh(geometry, material);
     mesh.name = "range";
     for (let i = 0; i < position.length; i++) {
+      const pMesh = mesh.clone();
+      const threePosition = new Vector3(
+        position[i][0] * 10 - 40,
+        0,
+        -position[i][1] * 10 + 45
+      );
+      pMesh.userData.position = position[i];
+      pMesh.position.set(threePosition.x, 4, threePosition.z);
+      this._rangeGroup.add(pMesh);
+    }
+    const targetMesh = new Mesh(geometry, targetMaterial);
+    targetMesh.name = "target";
+    for (let i = 0; i < targets.length; i++) {
       const pMesh = mesh.clone();
       const threePosition = new Vector3(
         position[i][0] * 10 - 40,
