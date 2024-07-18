@@ -462,45 +462,53 @@ class Pao extends Chess {
     this.moveRange = [];
     const targetRes: Chess[] = [];
     const chessPosition = chess.map((c) => c.position);
+    let overChess = false;
     for (let i = x - 1; i >= 0; i--) {
       const index = indexOf(chessPosition, [i, y]);
       if (index >= 0) {
-        if (chess[index].camp !== this.camp) {
+        if (overChess && chess[index].camp !== this.camp) {
           targetRes.push(chess[index]);
+          break;
         }
-        break;
+        overChess = true;
       }
-      this.moveRange.push([i, y]);
+      if (!overChess) this.moveRange.push([i, y]);
     }
+    overChess = false;
     for (let i = x + 1; i <= 8; i++) {
       const index = indexOf(chessPosition, [i, y]);
       if (index >= 0) {
-        if (chess[index].camp !== this.camp) {
+        if (overChess && chess[index].camp !== this.camp) {
           targetRes.push(chess[index]);
+          break;
         }
-        break;
+        overChess = true;
       }
-      this.moveRange.push([i, y]);
+      if (!overChess) this.moveRange.push([i, y]);
     }
+    overChess = false;
     for (let i = y - 1; i >= 0; i--) {
       const index = indexOf(chessPosition, [x, i]);
       if (index >= 0) {
-        if (chess[index].camp !== this.camp) {
+        if (overChess && chess[index].camp !== this.camp) {
           targetRes.push(chess[index]);
+          break;
         }
-        break;
+        overChess = true;
       }
-      this.moveRange.push([x, i]);
+      if (!overChess) this.moveRange.push([x, i]);
     }
+    overChess = false;
     for (let i = y + 1; i <= 9; i++) {
       const index = indexOf(chessPosition, [x, i]);
       if (index >= 0) {
-        if (chess[index].camp !== this.camp) {
+        if (overChess && chess[index].camp !== this.camp) {
           targetRes.push(chess[index]);
+          break;
         }
-        break;
+        overChess = true;
       }
-      this.moveRange.push([x, i]);
+      if (!overChess) this.moveRange.push([x, i]);
     }
 
     return { moveRange: this.moveRange, target: targetRes };
