@@ -367,6 +367,63 @@ class Ju extends Chess {
     this.moveRange = res;
     return { moveRange: this.moveRange, stop: this._stop };
   }
+  getFilterMoveRange(
+    chess: Chess[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _stopChess?: Chess[]
+  ): {
+    moveRange: number[][];
+    target: Chess[];
+  } {
+    const x = this.position[0];
+    const y = this.position[1];
+    // 返回两个数组，一个是可移动范围，一个是攻击目标
+    this.moveRange = [];
+    const targetRes: Chess[] = [];
+    const chessPosition = chess.map((c) => c.position);
+    for (let i = x - 1; i >= 0; i--) {
+      const index = indexOf(chessPosition, [i, y]);
+      if (index >= 0) {
+        if (chess[index].camp !== this.camp) {
+          targetRes.push(chess[index]);
+        }
+        break;
+      }
+      this.moveRange.push([i, y]);
+    }
+    for (let i = x + 1; i <= 8; i++) {
+      const index = indexOf(chessPosition, [i, y]);
+      if (index >= 0) {
+        if (chess[index].camp !== this.camp) {
+          targetRes.push(chess[index]);
+        }
+        break;
+      }
+      this.moveRange.push([i, y]);
+    }
+    for (let i = y - 1; i >= 0; i--) {
+      const index = indexOf(chessPosition, [x, i]);
+      if (index >= 0) {
+        if (chess[index].camp !== this.camp) {
+          targetRes.push(chess[index]);
+        }
+        break;
+      }
+      this.moveRange.push([x, i]);
+    }
+    for (let i = y + 1; i <= 9; i++) {
+      const index = indexOf(chessPosition, [x, i]);
+      if (index >= 0) {
+        if (chess[index].camp !== this.camp) {
+          targetRes.push(chess[index]);
+        }
+        break;
+      }
+      this.moveRange.push([x, i]);
+    }
+
+    return { moveRange: this.moveRange, target: targetRes };
+  }
 }
 class Pao extends Chess {
   constructor(option: ChessOption) {
@@ -390,6 +447,63 @@ class Pao extends Chess {
     }
     this.moveRange = res;
     return { moveRange: this.moveRange, stop: this._stop };
+  }
+  getFilterMoveRange(
+    chess: Chess[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _stopChess?: Chess[]
+  ): {
+    moveRange: number[][];
+    target: Chess[];
+  } {
+    const x = this.position[0];
+    const y = this.position[1];
+    // 返回两个数组，一个是可移动范围，一个是攻击目标
+    this.moveRange = [];
+    const targetRes: Chess[] = [];
+    const chessPosition = chess.map((c) => c.position);
+    for (let i = x - 1; i >= 0; i--) {
+      const index = indexOf(chessPosition, [i, y]);
+      if (index >= 0) {
+        if (chess[index].camp !== this.camp) {
+          targetRes.push(chess[index]);
+        }
+        break;
+      }
+      this.moveRange.push([i, y]);
+    }
+    for (let i = x + 1; i <= 8; i++) {
+      const index = indexOf(chessPosition, [i, y]);
+      if (index >= 0) {
+        if (chess[index].camp !== this.camp) {
+          targetRes.push(chess[index]);
+        }
+        break;
+      }
+      this.moveRange.push([i, y]);
+    }
+    for (let i = y - 1; i >= 0; i--) {
+      const index = indexOf(chessPosition, [x, i]);
+      if (index >= 0) {
+        if (chess[index].camp !== this.camp) {
+          targetRes.push(chess[index]);
+        }
+        break;
+      }
+      this.moveRange.push([x, i]);
+    }
+    for (let i = y + 1; i <= 9; i++) {
+      const index = indexOf(chessPosition, [x, i]);
+      if (index >= 0) {
+        if (chess[index].camp !== this.camp) {
+          targetRes.push(chess[index]);
+        }
+        break;
+      }
+      this.moveRange.push([x, i]);
+    }
+
+    return { moveRange: this.moveRange, target: targetRes };
   }
 }
 class Bing extends Chess {
