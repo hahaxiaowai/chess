@@ -1,5 +1,6 @@
 import Draw from "./Draw";
 import { Bing, Chess, Jiang, Ju, Ma, Pao, Shi, Xiang } from "./Chess";
+import { includes } from "./Common";
 interface BoardOption {
   id: string;
   chessOption: object;
@@ -218,7 +219,6 @@ class Board {
   showMoveRange(chess: string | Chess) {
     console.log(chess);
     let c: Chess;
-    let res: number[][] = [];
 
     if (typeof chess === "string") {
       if (this.chessMap.has(chess)) {
@@ -229,25 +229,30 @@ class Board {
     } else {
       c = chess;
     }
-    res = c.getMoveRange();
-    const { moveRange, target } = c.getFilterMoveRange(
-      res,
-      this._getChessByPosition(res)
+    const { moveRange, stop } = c.getMoveRange();
+    const chesses = this._getChessByPosition(moveRange, stop);
+    const filterMoveRange = c.getFilterMoveRange(
+      chesses.chess,
+      chesses.stopChess
     );
-    res = moveRange;
     this.activeChess = c;
-    this.draw.showRangeAndTarget(res, target);
+    this.draw.showRangeAndTarget(
+      filterMoveRange.moveRange,
+      filterMoveRange.target
+    );
   }
-  _getChessByPosition(position: number[][]) {
-    const strPosition = position.map((p) => p.toString());
+  _getChessByPosition(position: number[][], stop: number[][]) {
     const res: Chess[] = [];
+    const stopRes: Chess[] = [];
     for (let i = 0; i < this.chessArray.length; i++) {
-      const strP = this.chessArray[i].position.toString();
-      if (strPosition.includes(strP)) {
+      if (includes(position, this.chessArray[i].position)) {
         res.push(this.chessArray[i]);
       }
+      if (includes(stop, this.chessArray[i].position)) {
+        stopRes.push(this.chessArray[i]);
+      }
     }
-    return res;
+    return { chess: res, stopChess: stopRes };
   }
 }
 

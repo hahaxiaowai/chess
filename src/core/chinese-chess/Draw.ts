@@ -393,11 +393,11 @@ export default class Draw {
     const targetMesh = new Mesh(geometry, targetMaterial);
     targetMesh.name = "target";
     for (let i = 0; i < target.length; i++) {
-      const pMesh = mesh.clone();
+      const pMesh = targetMesh.clone();
       const threePosition = new Vector3(
-        position[i][0] * 10 - 40,
+        target[i].position[0] * 10 - 40,
         0,
-        -position[i][1] * 10 + 45
+        -target[i].position[1] * 10 + 45
       );
       pMesh.userData.position = position[i];
       pMesh.position.set(threePosition.x, 4, threePosition.z);

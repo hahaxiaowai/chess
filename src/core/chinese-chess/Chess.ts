@@ -1,3 +1,4 @@
+import { includes, indexOf } from "./Common";
 import Draw from "./Draw";
 
 interface ChessOption {
@@ -14,6 +15,7 @@ class Chess {
   name: string;
   position: [number, number];
   moveRange: number[][];
+  _stop: number[][]; //array转string
   index: number; // 大部分棋子是复数，用这个区分开
   constructor(option: ChessOption) {
     // this.name = "";
@@ -22,6 +24,7 @@ class Chess {
     this.camp = option.camp;
     this.position = [0, 0];
     this.moveRange = [];
+    this._stop = [];
     this.index = option.index;
     this.name = this.camp + "_" + this.type + "_" + this.index;
     this.initChess();
@@ -31,16 +34,30 @@ class Chess {
     this.draw.setPosition(this.name, this.position);
   }
   // 返回不限制移动范围
-  getMoveRange(): number[][] {
-    return [];
+  getMoveRange(): { moveRange: number[][]; stop: number[][] } {
+    return { moveRange: [], stop: this._stop };
   }
   // 返回限制移动范围
   getFilterMoveRange(
-    moveRange: number[][],
-    chess: Chess[]
-  ): { moveRange: number[][]; target: Chess[] } {
+    chess: Chess[],
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _stopChess?: Chess[]
+  ): {
+    moveRange: number[][];
+    target: Chess[];
+  } {
     // 返回两个数组，一个是可移动范围，一个是攻击目标
-    return { moveRange, target: chess };
+    const targetRes: Chess[] = [];
+    for (let i = 0; i < chess.length; i++) {
+      // 放进目标数组
+      if (chess[i].camp !== this.camp) {
+        targetRes.push(chess[i]);
+      }
+      // 在moveRange中删除
+      const index = indexOf(this.moveRange, chess[i].position);
+      this.moveRange.splice(index, 1);
+    }
+    return { moveRange: this.moveRange, target: targetRes };
   }
   move(position: [number, number]) {
     this.position = position;
@@ -59,7 +76,8 @@ class Jiang extends Chess {
     }
     this.move(this.position);
   }
-  getMoveRange(): number[][] {
+
+  getMoveRange(): { moveRange: number[][]; stop: number[][] } {
     // 只能在九宫格走
     // 范围是x:3~5 y:0~2 | 7~9
     // 可移动情况较少，所以直接穷举出来
@@ -100,12 +118,8 @@ class Jiang extends Chess {
       default:
         break;
     }
-    return res;
-  }
-  getFilterMoveRange(moveRange: number[][], chesses: Chess[]): number[][] {
-    console.log(moveRange, chesses);
-    // 返回两个数组，一个是可移动范围，一个是攻击目标
-    return [];
+    this.moveRange = res;
+    return { moveRange: this.moveRange, stop: this._stop };
   }
 }
 class Shi extends Chess {
@@ -118,7 +132,7 @@ class Shi extends Chess {
     }
     this.move(this.position);
   }
-  getMoveRange(): number[][] {
+  getMoveRange(): { moveRange: number[][]; stop: number[][] } {
     // 只能在九宫格走
     // 范围是x:3~5 y:0~2 | 7~9
     // 可移动情况较少，所以直接穷举出来
@@ -140,7 +154,8 @@ class Shi extends Chess {
       default:
         break;
     }
-    return res;
+    this.moveRange = res;
+    return { moveRange: this.moveRange, stop: this._stop };
   }
 }
 class Xiang extends Chess {
@@ -153,12 +168,13 @@ class Xiang extends Chess {
     }
     this.move(this.position);
   }
-  getMoveRange(): number[][] {
+  getMoveRange(): { moveRange: number[][]; stop: number[][] } {
     // 仅在7个点移动
     // 范围是x:偶数 y:0,2,4 | 5,7,9
     // 可移动情况较少，所以直接穷举出来
     const res = [];
     const x = this.position[0];
+    const y = this.position[1];
     const yRange = this.camp === "red" ? [0, 2, 4] : [9, 7, 5];
     switch (x) {
       case 0:
@@ -183,7 +199,59 @@ class Xiang extends Chess {
       default:
         break;
     }
-    return res;
+    this.moveRange = res;
+    this._stop = [];
+    for (let i = 0; i < this.moveRange.length; i++) {
+      this._stop.push([
+        (x + this.moveRange[i][0]) / 2,
+        (y + this.moveRange[i][1]) / 2,
+      ]);
+    }
+    return { moveRange: this.moveRange, stop: this._stop };
+  }
+
+  getFilterMoveRange(
+    chess: Chess[],
+    stopChess?: Chess[]
+  ): {
+    moveRange: number[][];
+    target: Chess[];
+  } {
+    // 返回两个数组，一个是可移动范围，一个是攻击目标
+    const targetRes: Chess[] = [];
+    // 蹩腿
+    if (stopChess) {
+      const deleteIndex = [];
+      for (let i = 0; i < stopChess.length; i++) {
+        const index = indexOf(this._stop, stopChess[i].position);
+        if (index >= 0) {
+          deleteIndex.push(index);
+        }
+      }
+      const temp = [];
+      for (let i = 0; i < this.moveRange.length; i++) {
+        if (deleteIndex.indexOf(i) < 0) {
+          temp.push(this.moveRange[i]);
+        }
+      }
+      this.moveRange = temp;
+    }
+    // moveRange被筛选，chess也需要筛选一次
+    for (let i = 0; i < chess.length; i++) {
+      const index = indexOf(this.moveRange, chess[i].position);
+      if (index < 0) {
+        continue;
+      } else {
+        // 在moveRange中删除
+        this.moveRange.splice(index, 1);
+      }
+      // 放进目标数组
+      if (chess[i].camp !== this.camp) {
+        targetRes.push(chess[i]);
+      }
+    }
+
+    return { moveRange: this.moveRange, target: targetRes };
   }
 }
 class Ma extends Chess {
@@ -196,9 +264,10 @@ class Ma extends Chess {
     }
     this.move(this.position);
   }
-  getMoveRange(): number[][] {
+  getMoveRange(): { moveRange: number[][]; stop: number[][] } {
     // 仅考虑正常的可移动位置，不考虑蹩马腿的情况
     // 可移动情况较少，所以直接穷举出来
+    // 先不考虑超出范围
     const res = [];
     const x = this.position[0];
     const y = this.position[1];
@@ -207,17 +276,72 @@ class Ma extends Chess {
     res.push([x - 2, y + 1]);
     res.push([x - 2, y - 1]);
     res.push([x + 1, y + 2]);
-    res.push([x + 1, y - 2]);
     res.push([x - 1, y + 2]);
+    res.push([x + 1, y - 2]);
     res.push([x - 1, y - 2]);
+    this.moveRange = res;
+    // this.moveRange = res.filter(
+    //   (position) =>
+    // position[0] >= 0 &&
+    // position[0] <= 8 &&
+    // position[1] >= 0 &&
+    // position[1] <= 9
+    // );
+    this._stop = [];
+    this._stop.push([x + 1, y]);
+    this._stop.push([x - 1, y]);
+    this._stop.push([x, y + 1]);
+    this._stop.push([x, y - 1]);
+    return { moveRange: this.moveRange, stop: this._stop };
+  }
+  getFilterMoveRange(
+    chess: Chess[],
+    stopChess?: Chess[]
+  ): {
+    moveRange: number[][];
+    target: Chess[];
+  } {
+    // 返回两个数组，一个是可移动范围，一个是攻击目标
+    const targetRes: Chess[] = [];
+    // 蹩腿+范围
+    if (stopChess) {
+      const deleteIndex = [];
+      for (let i = 0; i < stopChess.length; i++) {
+        const index = indexOf(this._stop, stopChess[i].position);
+        if (index >= 0) {
+          deleteIndex.push(index * 2, index * 2 + 1);
+        }
+      }
+      const temp = [];
+      for (let i = 0; i < this.moveRange.length; i++) {
+        if (
+          deleteIndex.indexOf(i) < 0 &&
+          this.moveRange[i][0] >= 0 &&
+          this.moveRange[i][0] <= 8 &&
+          this.moveRange[i][1] >= 0 &&
+          this.moveRange[i][1] <= 9
+        ) {
+          temp.push(this.moveRange[i]);
+        }
+      }
+      this.moveRange = temp;
+    }
+    // moveRange被筛选，chess也需要筛选一次
+    for (let i = 0; i < chess.length; i++) {
+      const index = indexOf(this.moveRange, chess[i].position);
+      if (index < 0) {
+        continue;
+      } else {
+        // 在moveRange中删除
+        this.moveRange.splice(index, 1);
+      }
+      // 放进目标数组
+      if (chess[i].camp !== this.camp) {
+        targetRes.push(chess[i]);
+      }
+    }
 
-    return res.filter(
-      (position) =>
-        position[0] >= 0 &&
-        position[0] <= 8 &&
-        position[1] >= 0 &&
-        position[1] <= 9
-    );
+    return { moveRange: this.moveRange, target: targetRes };
   }
 }
 class Ju extends Chess {
@@ -230,7 +354,7 @@ class Ju extends Chess {
     }
     this.move(this.position);
   }
-  getMoveRange(): number[][] {
+  getMoveRange(): { moveRange: number[][]; stop: number[][] } {
     const res = [];
     const x = this.position[0];
     const y = this.position[1];
@@ -240,7 +364,8 @@ class Ju extends Chess {
     for (let i = 0; i < 9; i++) {
       if (i !== x) res.push([i, y]);
     }
-    return res;
+    this.moveRange = res;
+    return { moveRange: this.moveRange, stop: this._stop };
   }
 }
 class Pao extends Chess {
@@ -253,7 +378,7 @@ class Pao extends Chess {
     }
     this.move(this.position);
   }
-  getMoveRange(): number[][] {
+  getMoveRange(): { moveRange: number[][]; stop: number[][] } {
     const res = [];
     const x = this.position[0];
     const y = this.position[1];
@@ -263,7 +388,8 @@ class Pao extends Chess {
     for (let i = 0; i < 9; i++) {
       if (i !== x) res.push([i, y]);
     }
-    return res;
+    this.moveRange = res;
+    return { moveRange: this.moveRange, stop: this._stop };
   }
 }
 class Bing extends Chess {
@@ -276,7 +402,7 @@ class Bing extends Chess {
     }
     this.move(this.position);
   }
-  getMoveRange(): number[][] {
+  getMoveRange(): { moveRange: number[][]; stop: number[][] } {
     const res = [];
     const x = this.position[0];
     const y = this.position[1];
@@ -293,7 +419,8 @@ class Bing extends Chess {
         if (x !== 0) res.push([x - 1, y]);
       }
     }
-    return res;
+    this.moveRange = res;
+    return { moveRange: this.moveRange, stop: this._stop };
   }
 }
 export { Chess, Jiang, Shi, Xiang, Ma, Ju, Pao, Bing };
