@@ -63,7 +63,9 @@ class Chess {
     this.position = position;
     this.draw.setPosition(this.name, this.position);
   }
-  kill() {}
+  beKilled() {
+    this.draw.hidden(this.name);
+  }
 }
 
 class Jiang extends Chess {

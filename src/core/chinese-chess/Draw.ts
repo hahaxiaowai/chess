@@ -120,8 +120,12 @@ export default class Draw {
     };
   }
   initEvent(cb: {
-    (chess: string | Chess, position?: [number, number]): void;
-    (arg0: string): void;
+    (
+      obj: string | Chess,
+      position?: [number, number],
+      chessName?: string
+    ): void;
+    (arg0: string, arg1: [number, number], arg2: string): void;
   }) {
     console.log(this.renderer.domElement.height);
     const raycaster = new Raycaster();
@@ -135,7 +139,8 @@ export default class Draw {
       if (rangeIntersection[0]) {
         cb(
           rangeIntersection[0].object.name,
-          rangeIntersection[0].object.userData.position
+          rangeIntersection[0].object.userData.position,
+          rangeIntersection[0].object.userData.name
         );
       } else {
         const intersection = raycaster.intersectObject(this.chessGroup);
@@ -361,6 +366,12 @@ export default class Draw {
         .get(name)
         ?.position.set(threePosition.x, threePosition.y, threePosition.z);
   }
+  hidden(name: string) {
+    const chess = this._chessMap.get(name);
+    if (chess) {
+      chess.visible = false;
+    }
+  }
   showRangeAndTarget(position: number[][], target: Chess[]) {
     this._rangeGroup.clear();
     const material = new MeshBasicMaterial({
@@ -394,12 +405,13 @@ export default class Draw {
     targetMesh.name = "target";
     for (let i = 0; i < target.length; i++) {
       const pMesh = targetMesh.clone();
+      pMesh.userData.name = target[i].name;
       const threePosition = new Vector3(
         target[i].position[0] * 10 - 40,
         0,
         -target[i].position[1] * 10 + 45
       );
-      pMesh.userData.position = position[i];
+      pMesh.userData.position = target[i].position;
       pMesh.position.set(threePosition.x, 4, threePosition.z);
       this._rangeGroup.add(pMesh);
     }

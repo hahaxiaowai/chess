@@ -197,8 +197,15 @@ class Board {
   initEvent() {
     // 这里有点绕，仅是为了让draw不参与业务逻辑，仅实现绘制逻辑
     // 可以考虑把draw.initEvent提到Board里
-    const cb = (obj: string | Chess, position?: [number, number]) => {
+    const cb = (
+      obj: string | Chess,
+      position?: [number, number],
+      chessName?: string
+    ) => {
       if (obj === "range" && this.activeChess && position) {
+        this.move(this.activeChess, position);
+      } else if (chessName && this.activeChess && position) {
+        this.chessMap.get(chessName)?.beKilled();
         this.move(this.activeChess, position);
       } else {
         this.showMoveRange(obj);
@@ -217,9 +224,7 @@ class Board {
     this.draw.clearRange();
   }
   showMoveRange(chess: string | Chess) {
-    console.log(chess);
     let c: Chess;
-
     if (typeof chess === "string") {
       if (this.chessMap.has(chess)) {
         c = this.chessMap.get(chess)!;
