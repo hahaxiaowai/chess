@@ -250,10 +250,16 @@ class Board {
     const res: Chess[] = [];
     const stopRes: Chess[] = [];
     for (let i = 0; i < this.chessArray.length; i++) {
-      if (includes(position, this.chessArray[i].position)) {
+      if (
+        this.chessArray[i].alive &&
+        includes(position, this.chessArray[i].position)
+      ) {
         res.push(this.chessArray[i]);
       }
-      if (includes(stop, this.chessArray[i].position)) {
+      if (
+        this.chessArray[i].alive &&
+        includes(stop, this.chessArray[i].position)
+      ) {
         stopRes.push(this.chessArray[i]);
       }
     }

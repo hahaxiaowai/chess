@@ -17,6 +17,7 @@ class Chess {
   moveRange: number[][];
   _stop: number[][]; //array转string
   index: number; // 大部分棋子是复数，用这个区分开
+  alive: boolean;
   constructor(option: ChessOption) {
     // this.name = "";
     this.draw = option.draw;
@@ -27,6 +28,7 @@ class Chess {
     this._stop = [];
     this.index = option.index;
     this.name = this.camp + "_" + this.type + "_" + this.index;
+    this.alive = true;
     this.initChess();
   }
   initChess() {
@@ -64,6 +66,7 @@ class Chess {
     this.draw.setPosition(this.name, this.position);
   }
   beKilled() {
+    this.alive = false;
     this.draw.hidden(this.name);
   }
 }

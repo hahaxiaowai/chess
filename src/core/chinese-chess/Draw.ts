@@ -144,8 +144,14 @@ export default class Draw {
         );
       } else {
         const intersection = raycaster.intersectObject(this.chessGroup);
-        if (intersection[0]) {
-          cb(intersection[0].object.name);
+        const aliveChess: { object: { name: string | Chess } }[] = [];
+        intersection.forEach((chess) => {
+          if (chess.object.visible) {
+            aliveChess.push(chess);
+          }
+        });
+        if (aliveChess[0]) {
+          cb(aliveChess[0].object.name);
         }
       }
     });
@@ -370,6 +376,9 @@ export default class Draw {
     const chess = this._chessMap.get(name);
     if (chess) {
       chess.visible = false;
+      chess.children.forEach((mesh) => {
+        mesh.visible = false;
+      });
     }
   }
   showRangeAndTarget(position: number[][], target: Chess[]) {
