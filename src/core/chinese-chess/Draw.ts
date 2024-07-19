@@ -127,7 +127,6 @@ export default class Draw {
     ): void;
     (arg0: string, arg1: [number, number], arg2: string): void;
   }) {
-    console.log(this.renderer.domElement.height);
     const raycaster = new Raycaster();
     const mouse = new Vector2(1, 1);
     this.renderer.domElement.addEventListener("click", (e) => {

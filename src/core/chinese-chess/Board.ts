@@ -1,27 +1,30 @@
 import Draw from "./Draw";
 import { Bing, Chess, Jiang, Ju, Ma, Pao, Shi, Xiang } from "./Chess";
 import { includes } from "./Common";
-interface BoardOption {
-  id: string;
-  chessOption: object;
-}
+import { Ref } from "vue";
 class Board {
   draw: Draw;
   chessArray: Chess[];
   chessMap: Map<string, Chess>;
   activeChess?: Chess;
+  activeGamer: "red" | "black";
+  model: "local" | "online";
+  message: Ref<string>;
   constructor(option: BoardOption) {
     this.draw = new Draw(option.id);
     this.initBoard(option);
     this.chessArray = [];
     this.chessMap = new Map();
-    this.initChess(option.chessOption);
+    this.model = option.model;
+    this.activeGamer = "red";
+    this.message = option.message;
+    this.initChess(option?.chessOption);
     this.initEvent();
   }
-  initBoard(option: BoardOption) {
+  initBoard(option?: BoardOption) {
     this.draw.drawBoard();
   }
-  initChess(option: object) {
+  initChess(option?: object) {
     // 帥，将
     this.chessArray.push(
       new Jiang({
@@ -206,9 +209,10 @@ class Board {
         this.move(this.activeChess, position);
       } else if (chessName && this.activeChess && position) {
         this.chessMap.get(chessName)?.beKilled();
+        this.isWin();
         this.move(this.activeChess, position);
       } else {
-        this.showMoveRange(obj);
+        this.showRangeAndTarget(obj);
       }
     };
     this.draw.initEvent(cb);
@@ -221,9 +225,10 @@ class Board {
     } else {
       chess.move(position);
     }
+    this.activeGamer = this.activeGamer === "red" ? "black" : "red";
     this.draw.clearRange();
   }
-  showMoveRange(chess: string | Chess) {
+  showRangeAndTarget(chess: string | Chess) {
     let c: Chess;
     if (typeof chess === "string") {
       if (this.chessMap.has(chess)) {
@@ -240,6 +245,7 @@ class Board {
       chesses.chess,
       chesses.stopChess
     );
+    if (c.camp !== this.activeGamer) return;
     this.activeChess = c;
     this.draw.showRangeAndTarget(
       filterMoveRange.moveRange,
@@ -264,6 +270,19 @@ class Board {
       }
     }
     return { chess: res, stopChess: stopRes };
+  }
+  isWin() {
+    const jiang = this.chessMap.get("black_将_0");
+    if (jiang && !jiang.alive) {
+      console.log("红方赢");
+      this.message.value = "红方赢";
+    }
+
+    const jiang2 = this.chessMap.get("red_帥_0");
+    if (jiang2 && !jiang2.alive) {
+      console.log("黑方赢");
+      this.message.value = "黑方赢";
+    }
   }
 }
 

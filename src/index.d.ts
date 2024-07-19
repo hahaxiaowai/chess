@@ -24,3 +24,10 @@ declare type ChessType =
   | "兵"
   | "卒";
 declare type ChessCamp = "red" | "black";
+
+interface BoardOption {
+  id: string;
+  chessOption?: object;
+  model: "local" | "online";
+  message: Ref<string>;
+}
