@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm run --filter chess dev",
+    "serve": "pnpm run --filter server start",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview"
   }

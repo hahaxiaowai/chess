@@ -2,6 +2,13 @@ import Draw from "./Draw";
 import { Bing, Chess, Jiang, Ju, Ma, Pao, Shi, Xiang } from "./Chess";
 import { includes } from "./Common";
 import { Ref } from "vue";
+import Gamer from "./Gamer";
+interface BoardOption {
+  id: string;
+  chessOption?: object;
+  model: "local" | "online";
+  message: Ref<string>;
+}
 class Board {
   draw: Draw;
   chessArray: Chess[];
@@ -10,6 +17,8 @@ class Board {
   activeGamer: "red" | "black";
   model: "local" | "online";
   message: Ref<string>;
+  curGamer?: "red" | "black" | "viewer";
+  asyncMove?: Function;
   constructor(option: BoardOption) {
     this.draw = new Draw(option.id);
     this.initBoard(option);
@@ -21,6 +30,7 @@ class Board {
     this.initChess(option?.chessOption);
     this.initEvent();
   }
+
   initBoard(option?: BoardOption) {
     this.draw.drawBoard();
   }
@@ -201,21 +211,34 @@ class Board {
     // 这里有点绕，仅是为了让draw不参与业务逻辑，仅实现绘制逻辑
     // 可以考虑把draw.initEvent提到Board里
     const cb = (
-      obj: string | Chess,
+      type: string,
       position?: [number, number],
       chessName?: string
     ) => {
-      if (obj === "range" && this.activeChess && position) {
-        this.move(this.activeChess, position);
-      } else if (chessName && this.activeChess && position) {
-        this.chessMap.get(chessName)?.beKilled();
-        this.isWin();
-        this.move(this.activeChess, position);
+      if (this.curGamer !== this.activeGamer) return;
+      const flag = type === "range" && this.activeChess && position;
+      const flag2 = chessName && this.activeChess && position;
+      if (flag || flag2) {
+        if (this.asyncMove) this.asyncMove(type, position, chessName);
       } else {
-        this.showRangeAndTarget(obj);
+        this.showRangeAndTarget(type);
       }
     };
     this.draw.initEvent(cb);
+  }
+  setGamerRuler(camp: "red" | "black" | "viewer") {
+    this.curGamer = camp;
+  }
+  gamerMove(type: string, position?: [number, number], chessName?: string) {
+    if (type === "range" && this.activeChess && position) {
+      this.move(this.activeChess, position);
+    } else if (chessName && this.activeChess && position) {
+      this.chessMap.get(chessName)?.beKilled();
+      this.isWin();
+      this.move(this.activeChess, position);
+    } else {
+      this.showRangeAndTarget(type);
+    }
   }
   move(chess: string | Chess, position: [number, number]) {
     if (typeof chess === "string") {
@@ -225,6 +248,9 @@ class Board {
     } else {
       chess.move(position);
     }
+    // if (this.model === "online" && this.asyncMove) {
+    //   this.asyncMove(typeof chess === "string" ? chess : chess.name, position);
+    // }
     this.activeGamer = this.activeGamer === "red" ? "black" : "red";
     this.draw.clearRange();
   }
@@ -277,7 +303,6 @@ class Board {
       console.log("红方赢");
       this.message.value = "红方赢";
     }
-
     const jiang2 = this.chessMap.get("red_帥_0");
     if (jiang2 && !jiang2.alive) {
       console.log("黑方赢");

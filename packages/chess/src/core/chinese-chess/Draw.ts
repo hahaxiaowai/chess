@@ -121,7 +121,7 @@ export default class Draw {
   }
   initEvent(cb: {
     (
-      obj: string | Chess,
+      type: string,
       position?: [number, number],
       chessName?: string
     ): void;
@@ -130,6 +130,7 @@ export default class Draw {
     const raycaster = new Raycaster();
     const mouse = new Vector2(1, 1);
     this.renderer.domElement.addEventListener("click", (e) => {
+      console.log("click");
       e.preventDefault();
       mouse.x = (e.offsetX / this.renderer.domElement.offsetWidth) * 2 - 1;
       mouse.y = -(e.offsetY / this.renderer.domElement.offsetHeight) * 2 + 1;
@@ -143,7 +144,7 @@ export default class Draw {
         );
       } else {
         const intersection = raycaster.intersectObject(this.chessGroup);
-        const aliveChess: { object: { name: string | Chess } }[] = [];
+        const aliveChess: { object: { name: string } }[] = [];
         intersection.forEach((chess) => {
           if (chess.object.visible) {
             aliveChess.push(chess);
