@@ -1,6 +1,9 @@
 # chess
 象棋，五子棋
-
+## 项目执行方式
+1. `pnpm i`
+2. `npm run serve`
+3. `npm run dev`
 ## TODO
 1. 绘制棋盘棋子 &#10004;
 2. 棋子逻辑 &#10004;
