@@ -230,6 +230,9 @@ class Board {
     this.curGamer = camp;
     this.draw.setChessRotation(this.curGamer);
   }
+  setCameraPosition(type: string) {
+    this.draw.flyTo(type, this.curGamer || "red");
+  }
   gamerMove(type: string, position?: [number, number], chessName?: string) {
     if (type === "range" && this.activeChess && position) {
       this.move(this.activeChess, position);
@@ -299,7 +302,6 @@ class Board {
     return { chess: res, stopChess: stopRes };
   }
   isWin() {
-    const jiang = this.chessMap.get("black_将_0");
     if (jiang && !jiang.alive) {
       console.log("红方赢");
       this.message.value = "红方赢";

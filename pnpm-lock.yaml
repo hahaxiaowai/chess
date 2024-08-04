@@ -10,6 +10,9 @@ importers:
 
   packages/chess:
     dependencies:
+      '@tweenjs/tween.js':
+        specifier: ^25.0.0
+        version: 25.0.0
       '@types/three':
         specifier: ^0.166.0
         version: 0.166.0
@@ -421,6 +424,9 @@ packages:
 
   '@tweenjs/tween.js@23.1.2':
     resolution: {integrity: sha512-kMCNaZCJugWI86xiEHaY338CU5JpD0B97p1j1IKNn/Zto8PgACjQx0UxbHjmOcLl/dDOBnItwD07KmCs75pxtQ==}
+
+  '@tweenjs/tween.js@25.0.0':
+    resolution: {integrity: sha512-XKLA6syeBUaPzx4j3qwMqzzq+V4uo72BnlbOjmuljLrRqdsd3qnzvZZoxvMHZ23ndsRS4aufU6JOZYpCbU6T1A==}
 
   '@types/cookie@0.4.1':
     resolution: {integrity: sha512-XW/Aa8APYr6jSVVA1y/DEIZX0/GMKLEVekNG727R8cs56ahETkRAy/3DR7+fJyh7oUgGwNQaRfXCun0+KbWY7Q==}
@@ -1845,6 +1851,8 @@ snapshots:
   '@socket.io/component-emitter@3.1.2': {}
 
   '@tweenjs/tween.js@23.1.2': {}
+
+  '@tweenjs/tween.js@25.0.0': {}
 
   '@types/cookie@0.4.1': {}
 

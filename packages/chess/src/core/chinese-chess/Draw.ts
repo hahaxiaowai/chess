@@ -27,6 +27,7 @@ import {
   OrbitControls,
   SVGLoader,
 } from "three/examples/jsm/Addons.js";
+import * as TWEEN from "@tweenjs/tween.js";
 import svg from "./svg";
 import { Chess } from "./Chess";
 export default class Draw {
@@ -42,6 +43,7 @@ export default class Draw {
   _rangeGroup: Group;
   _originRotation?: number;
   _chessRotation: boolean;
+  _tweenGroup?: TWEEN.Group;
   constructor(id: string) {
     const { scene, camera, renderer, controls, boardGroup, chessGroup } =
       this.initScene(id);
@@ -102,8 +104,11 @@ export default class Draw {
     controls.maxPolarAngle = Math.PI * 0.5;
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    this._tweenGroup = new TWEEN.Group();
+
     renderer.setAnimationLoop(() => {
       controls.update();
+      if (this._tweenGroup) this._tweenGroup.update();
       renderer.render(scene, camera);
     });
     const boardGroup = new Group();
@@ -137,12 +142,47 @@ export default class Draw {
     // });
     this.controls.addEventListener("end", (e) => {
       const degree = (this.camera.rotation.z * 180) / Math.PI;
+      console.log(degree, (this.camera.rotation.y * 180) / Math.PI);
       if (degree < 90 && degree > -90) {
         this._rotateChessText(false);
       } else {
         this._rotateChessText(true);
       }
     });
+  }
+  flyTo(type: string, camp: "red" | "black" | "viewer") {
+    if (type === "down") {
+      const translate = new TWEEN.Tween(this.camera.position, this._tweenGroup)
+        // z不能为0，为0时会旋转成正方向
+        .to(new Vector3(0, 100, camp === "black" ? -0.01 : 0.01), 1000)
+        .start()
+        .onComplete(() => {
+          translate.remove();
+        });
+      const rotate = new TWEEN.Tween(this.camera.rotation, this._tweenGroup)
+        .to(new Vector3(-Math.PI / 2, 0, camp === "black" ? Math.PI : 0), 1000)
+        .start()
+        .onComplete(() => {
+          rotate.remove();
+        });
+      console.log(this._tweenGroup);
+    }
+    if (type === "front") {
+      const target = new Vector3(0, 85, camp === "black" ? -55 : 55);
+      const translate = new TWEEN.Tween(this.camera.position, this._tweenGroup)
+        .to(target, 1000)
+        .start()
+        .onComplete(() => {
+          translate.remove();
+        });
+      // const rotate = new TWEEN.Tween(this.camera.rotation, this._tweenGroup)
+      //   .to(new Vector3(-Math.PI / 2, 0, 0), 1000)
+      //   .start()
+      //   .onComplete(() => {
+      //     rotate.remove();
+      //   });
+      console.log(this._tweenGroup);
+    }
   }
   initEvent(cb: {
     (type: string, position?: [number, number], chessName?: string): void;

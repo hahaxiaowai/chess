@@ -26,6 +26,9 @@ const confirm = async () => {
   const flag = await gamer.setCamp(camp.value)
   disable.value = flag
 }
+const setView = (type: string) => {
+  gamer.board?.setCameraPosition(type)
+}
 </script>
 
 <template>
@@ -43,6 +46,12 @@ const confirm = async () => {
       </a-radio-group>
       <a-button :disabled="disable" style="margin-left: 1rem;" type="primary" @click="confirm">确定</a-button>
     </div>
+    <div class="operation">
+      视角调整：
+      <a-button type="primary" @click="setView('down')">俯视</a-button>
+      <a-button style="margin-left: 1rem;" type="primary" @click="setView('front')">正视</a-button>
+    </div>
+
   </div>
 
   <div id="chess"></div>
@@ -79,5 +88,9 @@ const confirm = async () => {
     }
 
     .gamer {}
+
+    .operation {
+      padding: 0.25rem 0rem;
+    }
   }
 </style>
