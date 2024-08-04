@@ -13,14 +13,11 @@ import {
   Mesh,
   MeshBasicMaterial,
   MeshPhongMaterial,
-  MeshPhysicalMaterial,
-  OrthographicCamera,
   PerspectiveCamera,
   PlaneGeometry,
   Raycaster,
   Scene,
   Shape,
-  ShapeGeometry,
   Vector2,
   Vector3,
   WebGLRenderer,
@@ -43,6 +40,8 @@ export default class Draw {
   chessGroup: Group;
   _chessMap: Map<string, Mesh>;
   _rangeGroup: Group;
+  _originRotation?: number;
+  _chessRotation: boolean;
   constructor(id: string) {
     const { scene, camera, renderer, controls, boardGroup, chessGroup } =
       this.initScene(id);
@@ -60,6 +59,8 @@ export default class Draw {
       color: "rgb(0,0,0)",
       // side: DoubleSide,
     });
+    this._chessRotation = false;
+    this.initSceneEvent();
   }
   initScene(id: string) {
     const container = document.getElementById(id);
@@ -75,7 +76,6 @@ export default class Draw {
     );
     camera.updateProjectionMatrix();
     scene.add(camera);
-    camera.rotateY(Math.PI);
     camera.position.set(0, 85, 55);
     scene.add(new AmbientLight("rgb(255,255,255)"));
     const light = new DirectionalLight("rgb(255,255,255)", 1);
@@ -119,12 +119,33 @@ export default class Draw {
       chessGroup,
     };
   }
+  initSceneEvent() {
+    // new Proxy(this.camera.position, {
+    //   get: (target: Vector3, prop: "x" | "y" | "z") => {
+    //     return target[prop];
+    //   },
+    //   set: (target, p, newValue: Vector3) => {
+    //     console.log(newValue);
+    //     const { x, y, z } = newValue;
+    //     target.x = x;
+    //     target.y = y;
+    //     if (z !== undefined) {
+    //       target.z = z;
+    //     }
+    //     return true;
+    //   },
+    // });
+    this.controls.addEventListener("end", (e) => {
+      const degree = (this.camera.rotation.z * 180) / Math.PI;
+      if (degree < 90 && degree > -90) {
+        this._rotateChessText(false);
+      } else {
+        this._rotateChessText(true);
+      }
+    });
+  }
   initEvent(cb: {
-    (
-      type: string,
-      position?: [number, number],
-      chessName?: string
-    ): void;
+    (type: string, position?: [number, number], chessName?: string): void;
     (arg0: string, arg1: [number, number], arg2: string): void;
   }) {
     const raycaster = new Raycaster();
@@ -360,6 +381,29 @@ export default class Draw {
       textMesh.name = name;
       mesh.add(textMesh);
     });
+  }
+  _rotateChessText(flag: boolean) {
+    if (this._chessRotation !== flag) {
+      for (let i = 0; i < this.chessGroup.children.length; i++) {
+        const element = this.chessGroup.children[i];
+        if (element && this._originRotation !== undefined)
+          element.rotation.set(
+            element.rotation.x,
+            this._originRotation + (this._chessRotation ? 0 : Math.PI),
+            element.rotation.z
+          );
+      }
+      this._chessRotation = flag;
+    }
+  }
+  setChessRotation(camp: "red" | "black" | "viewer") {
+    this._originRotation = 0;
+
+    if (camp === "black") {
+      this._rotateChessText(true);
+      this.camera.position.set(0, 85, -55);
+      this.controls.update();
+    }
   }
   setPosition(name: string, position: [number, number]) {
     const threePosition = new Vector3(

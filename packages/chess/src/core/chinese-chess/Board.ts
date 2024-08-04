@@ -228,6 +228,7 @@ class Board {
   }
   setGamerRuler(camp: "red" | "black" | "viewer") {
     this.curGamer = camp;
+    this.draw.setChessRotation(this.curGamer);
   }
   gamerMove(type: string, position?: [number, number], chessName?: string) {
     if (type === "range" && this.activeChess && position) {
