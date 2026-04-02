@@ -1,0 +1,13 @@
+{
+  "name": "@chess/tsconfig",
+  "private": true,
+  "version": "1.0.0",
+  "files": [
+    "*.json"
+  ],
+  "exports": {
+    "./base.json": "./base.json",
+    "./server.json": "./server.json",
+    "./web.json": "./web.json"
+  }
+}
