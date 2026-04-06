@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "predev": "pnpm --filter @chess/game-core build",
+    "prebuild": "pnpm --filter @chess/game-core build",
     "dev": "vite --host",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",

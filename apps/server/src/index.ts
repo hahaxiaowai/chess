@@ -1,4 +1,7 @@
+import { existsSync } from "node:fs";
 import { createServer } from "node:http";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import cors from "cors";
 import express from "express";
 import { Server } from "socket.io";
@@ -16,12 +19,27 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(httpServer, {
 });
 
 const port = Number(process.env.PORT ?? 3001);
+const isProduction = process.env.NODE_ENV === "production";
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+const webDistDir = path.resolve(currentDir, "../../web/dist");
+const webIndexPath = path.join(webDistDir, "index.html");
 const roomManager = new RoomManager();
 const disconnectTimers = new Map<string, { deadline: number; timer: NodeJS.Timeout }>();
 
-app.get("/", (_req, res) => {
-  res.send("<h1>Chess server is running</h1>");
+app.get("/healthz", (_req, res) => {
+  res.json({ ok: true });
 });
+
+if (isProduction && existsSync(webIndexPath)) {
+  app.use(express.static(webDistDir));
+  app.get(/^(?!\/socket\.io(?:\/|$)).*/, (_req, res) => {
+    res.sendFile(webIndexPath);
+  });
+} else {
+  app.get("/", (_req, res) => {
+    res.send("<h1>Chess server is running</h1>");
+  });
+}
 
 function timerKey(roomId: string, camp: Camp) {
   return `${roomId}:${camp}`;
@@ -137,5 +155,5 @@ io.on("connection", (socket) => {
 });
 
 httpServer.listen(port, () => {
-  console.log(`server running at http://127.0.0.1:${port}`);
+  console.log(`server running at http://0.0.0.0:${port}`);
 });

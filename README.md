@@ -1,5 +1,63 @@
 # chess
 
+## Project Overview
+
+This repository contains a Turbo monorepo for online Chinese chess:
+
+- `apps/web`: Vue 3 + Vite frontend
+- `apps/server`: Express + Socket.IO backend
+- `packages/game-core`: shared game and protocol logic
+
+## Local Development
+
+1. `pnpm install`
+2. `pnpm dev`
+
+By default:
+
+- Web runs on the Vite dev server
+- Server runs on `http://127.0.0.1:3001`
+- Web connects to the backend through `apps/web/.env.development`
+
+Useful commands:
+
+- `pnpm dev`
+- `pnpm build`
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm test`
+
+## Docker Single-Container Deployment
+
+Production deployment now supports a single container:
+
+- frontend assets are built into `apps/web/dist`
+- the backend serves static files, HTTP endpoints, and Socket.IO from one process
+- the frontend uses same-origin Socket.IO by default in production, so `VITE_WS` is only needed for local development
+
+Build the image:
+
+```bash
+docker build -t chess-app .
+```
+
+Run the container:
+
+```bash
+docker run --rm -p 3001:3001 chess-app
+```
+
+Run on a custom port:
+
+```bash
+docker run --rm -e PORT=8080 -p 8080:8080 chess-app
+```
+
+After startup:
+
+- app: `http://127.0.0.1:3001`
+- health check: `http://127.0.0.1:3001/healthz`
+
 基于 Turborepo 的联机象棋仓库，包含：
 
 - `apps/web`：Vue 3 + Vite 前端

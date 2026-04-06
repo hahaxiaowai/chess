@@ -1,0 +1,12 @@
+.git
+.turbo
+.vscode
+node_modules
+apps/*/node_modules
+packages/*/node_modules
+apps/*/dist
+packages/*/dist
+coverage
+logs
+*.log
+pnpm-debug.log*

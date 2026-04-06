@@ -32,6 +32,16 @@ function getPlayerId() {
   return nextId;
 }
 
+function getSocketUrl() {
+  const configured = import.meta.env.VITE_WS?.trim();
+
+  if (import.meta.env.DEV) {
+    return configured || window.location.origin;
+  }
+
+  return configured || undefined;
+}
+
 class Gamer {
   roomId: string;
   stats: Ref<"disconnect" | "ready" | "run">;
@@ -44,7 +54,7 @@ class Gamer {
     this.roomId = roomId;
     this.playerId = getPlayerId();
     this.message = message;
-    this.socket = io(import.meta.env.VITE_WS);
+    this.socket = io(getSocketUrl());
     this.stats = ref("disconnect");
     this.roomSnapshot = ref(null);
 
