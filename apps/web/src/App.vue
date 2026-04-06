@@ -201,7 +201,7 @@ const respondRematch = async (accept: boolean) => {
 
 <template>
   <div v-if="messageShow" class="message-box">{{ message }}</div>
-  <div class="config">
+  <div class="config" :class="{ 'config--selection': !hasSelectedGameType }">
     <div class="stats">玩法：{{ gameTypeLabel }}</div>
     <div class="stats">房间号：{{ roomId }}</div>
     <template v-if="hasSelectedGameType">
@@ -284,6 +284,17 @@ const respondRematch = async (accept: boolean) => {
   padding: 1rem;
   background-color: rgba(240, 248, 255, 0.92);
   z-index: 2;
+}
+
+.config--selection {
+  top: 50%;
+  right: auto;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 20rem;
+  text-align: center;
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2.5rem rgba(80, 57, 26, 0.16);
 }
 
 .stats,
