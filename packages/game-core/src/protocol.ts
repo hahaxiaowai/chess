@@ -1,19 +1,27 @@
-import type { Camp, Position, SeatCamp, SerializedGameState } from "./game.js";
+﻿import type { Camp, GameType, Position, SeatCamp, SerializedGameState } from "./game.js";
 
 export interface JoinRoomPayload {
   roomId: string;
   playerId: string;
+  gameType: GameType;
 }
 
 export interface SetCampPayload extends JoinRoomPayload {
   camp: SeatCamp;
 }
 
-export interface SubmitMovePayload extends JoinRoomPayload {
+export interface ChineseChessSubmitMovePayload extends JoinRoomPayload {
+  gameType: "chinese-chess";
   pieceId: string;
   to: Position;
 }
 
+export interface GobangSubmitMovePayload extends JoinRoomPayload {
+  gameType: "gobang";
+  position: Position;
+}
+
+export type SubmitMovePayload = ChineseChessSubmitMovePayload | GobangSubmitMovePayload;
 export type RequestRematchPayload = JoinRoomPayload;
 
 export interface RespondRematchPayload extends JoinRoomPayload {
@@ -33,6 +41,7 @@ export interface RematchSnapshot {
 
 export interface RoomSnapshot {
   roomId: string;
+  gameType: GameType;
   selfCamp: SeatCamp;
   game: SerializedGameState;
   seats: Record<Camp, SeatSnapshot>;
@@ -43,6 +52,7 @@ export interface RoomSnapshot {
 export type AckCode =
   | "INVALID_SESSION"
   | "ROOM_NOT_FOUND"
+  | "ROOM_GAME_TYPE_MISMATCH"
   | "SEAT_TAKEN"
   | "ROOM_NOT_READY"
   | "NOT_PLAYER"
@@ -51,6 +61,7 @@ export type AckCode =
   | "GAME_FINISHED"
   | "GAME_NOT_ACTIVE"
   | "PIECE_NOT_FOUND"
+  | "CELL_OCCUPIED"
   | "REMATCH_NOT_AVAILABLE"
   | "REMATCH_ALREADY_PENDING"
   | "INVALID_REMATCH_RESPONSE";

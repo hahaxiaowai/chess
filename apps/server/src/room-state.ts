@@ -1,10 +1,14 @@
-import {
-  applyMove,
+﻿import {
+  applyChineseChessMove,
+  applyGobangMove,
   createInitialGame,
   resetGame,
   serializeGame,
   type AckCode,
   type Camp,
+  type ChineseChessGameState,
+  type GameType,
+  type GobangGameState,
   type JoinRoomPayload,
   type RematchSnapshot,
   type RequestRematchPayload,
@@ -26,6 +30,7 @@ type SeatState = {
 
 type RoomState = {
   roomId: string;
+  gameType: GameType;
   game: ReturnType<typeof createInitialGame>;
   seats: Record<Camp, SeatState>;
   playerSessions: Map<string, Set<string>>;
@@ -38,6 +43,7 @@ type RoomState = {
 type Session = {
   roomId: string;
   playerId: string;
+  gameType: GameType;
 };
 
 type RoomActionResult = {
@@ -64,10 +70,11 @@ function createSeatState(): SeatState {
   };
 }
 
-function createRoom(roomId: string): RoomState {
+function createRoom(roomId: string, gameType: GameType): RoomState {
   return {
     roomId,
-    game: createInitialGame(),
+    gameType,
+    game: createInitialGame(gameType),
     seats: {
       red: createSeatState(),
       black: createSeatState(),
@@ -93,18 +100,34 @@ export class RoomManager {
 
     if (
       previousSession &&
-      (previousSession.roomId !== payload.roomId || previousSession.playerId !== payload.playerId)
+      (previousSession.roomId !== payload.roomId ||
+        previousSession.playerId !== payload.playerId ||
+        previousSession.gameType !== payload.gameType)
     ) {
       const leaveResult = this.removeSocket(socketId, now, false);
       leaveResult.changedRooms.forEach((roomId) => changedRooms.add(roomId));
     }
 
-    const room = this.getOrCreateRoom(payload.roomId);
+    const existingRoom = this.rooms.get(payload.roomId);
+
+    if (existingRoom && existingRoom.gameType !== payload.gameType) {
+      return {
+        ack: this.failure(
+          "ROOM_GAME_TYPE_MISMATCH",
+          "该房间已用于另一种玩法",
+          this.buildSnapshot(payload.roomId, payload.playerId),
+        ),
+        changedRooms: [],
+      };
+    }
+
+    const room = this.getOrCreateRoom(payload.roomId, payload.gameType);
 
     room.socketIds.add(socketId);
     this.sessions.set(socketId, {
       roomId: payload.roomId,
       playerId: payload.playerId,
+      gameType: payload.gameType,
     });
 
     const playerSessions = room.playerSessions.get(payload.playerId) ?? new Set<string>();
@@ -151,11 +174,7 @@ export class RoomManager {
 
       if (targetSeat.playerId && targetSeat.playerId !== playerId) {
         return {
-          ack: this.failure(
-            "SEAT_TAKEN",
-            "该位置已经有人了",
-            this.buildSnapshot(roomId, playerId),
-          ),
+          ack: this.failure("SEAT_TAKEN", "该位置已经有人了", this.buildSnapshot(roomId, playerId)),
           changedRooms: [],
         };
       }
@@ -218,11 +237,11 @@ export class RoomManager {
       };
     }
 
-    const result = applyMove(room.game, payload.pieceId, payload.to);
+    const result = this.applyRoomMove(room, payload);
 
     if (!result.ok) {
       return {
-        ack: this.failure(result.code, result.message, this.buildSnapshot(roomId, playerId)),
+        ack: this.failure(result.code as AckCode, result.message, this.buildSnapshot(roomId, playerId)),
         changedRooms: [],
       };
     }
@@ -230,11 +249,15 @@ export class RoomManager {
     room.game = result.game;
     this.refreshGameStatus(room);
 
+    const winnerMessage =
+      result.winner === "draw"
+        ? "平局"
+        : result.winner
+          ? `${this.getCampLabel(room.gameType, result.winner)}获胜`
+          : undefined;
+
     return {
-      ack: this.success(
-        this.buildSnapshot(roomId, playerId),
-        result.winner ? `${result.winner === "red" ? "红方" : "黑方"}获胜` : undefined,
-      ),
+      ack: this.success(this.buildSnapshot(roomId, playerId), winnerMessage),
       changedRooms: [roomId],
     };
   }
@@ -268,7 +291,11 @@ export class RoomManager {
 
     if (!room.seats.red.playerId || !room.seats.black.playerId) {
       return {
-        ack: this.failure("REMATCH_NOT_AVAILABLE", "需要双方都在房间中才能重开", this.buildSnapshot(roomId, playerId)),
+        ack: this.failure(
+          "REMATCH_NOT_AVAILABLE",
+          "需要双方都在房间中才能重开",
+          this.buildSnapshot(roomId, playerId),
+        ),
         changedRooms: [],
       };
     }
@@ -336,7 +363,7 @@ export class RoomManager {
       };
     }
 
-    room.game = resetGame();
+    room.game = resetGame(room.gameType);
     this.clearRematch(room);
     this.refreshGameStatus(room);
 
@@ -397,14 +424,14 @@ export class RoomManager {
     return this.rooms.get(roomId);
   }
 
-  private getOrCreateRoom(roomId: string) {
+  private getOrCreateRoom(roomId: string, gameType: GameType) {
     const existingRoom = this.rooms.get(roomId);
 
     if (existingRoom) {
       return existingRoom;
     }
 
-    const room = createRoom(roomId);
+    const room = createRoom(roomId, gameType);
     this.rooms.set(roomId, room);
     return room;
   }
@@ -473,7 +500,12 @@ export class RoomManager {
   ): ValidatedSession | { ack: ServerAck } {
     const session = this.sessions.get(socketId);
 
-    if (!session || session.roomId !== payload.roomId || session.playerId !== payload.playerId) {
+    if (
+      !session ||
+      session.roomId !== payload.roomId ||
+      session.playerId !== payload.playerId ||
+      session.gameType !== payload.gameType
+    ) {
       return {
         ack: this.failure("INVALID_SESSION", "当前连接身份已失效，请重新加入房间"),
       };
@@ -484,6 +516,12 @@ export class RoomManager {
     if (!room) {
       return {
         ack: this.failure("ROOM_NOT_FOUND", "房间不存在或已经被释放"),
+      };
+    }
+
+    if (room.gameType !== payload.gameType) {
+      return {
+        ack: this.failure("ROOM_GAME_TYPE_MISMATCH", "房间玩法不匹配", this.buildSnapshot(payload.roomId, payload.playerId)),
       };
     }
 
@@ -502,11 +540,7 @@ export class RoomManager {
     };
   }
 
-  private failure(
-    code: AckCode,
-    message: string,
-    snapshot?: RoomSnapshot,
-  ): ServerAck {
+  private failure(code: AckCode, message: string, snapshot?: RoomSnapshot): ServerAck {
     return {
       ok: false,
       code,
@@ -524,6 +558,7 @@ export class RoomManager {
 
     return {
       roomId,
+      gameType: room.gameType,
       selfCamp: this.getSelfCamp(room, playerId),
       game: serializeGame(room.game),
       seats: {
@@ -631,4 +666,29 @@ export class RoomManager {
       this.rooms.delete(roomId);
     }
   }
+
+  private applyRoomMove(room: RoomState, payload: SubmitMovePayload) {
+    if (room.gameType === "gobang") {
+      const gobangPayload = payload as Extract<SubmitMovePayload, { gameType: "gobang" }>;
+      return applyGobangMove(room.game as GobangGameState, gobangPayload.position);
+    }
+
+    const chineseChessPayload = payload as Extract<SubmitMovePayload, { gameType: "chinese-chess" }>;
+    return applyChineseChessMove(
+      room.game as ChineseChessGameState,
+      chineseChessPayload.pieceId,
+      chineseChessPayload.to,
+    );
+  }
+
+  private getCampLabel(gameType: GameType, camp: Camp) {
+    if (gameType === "gobang") {
+      return camp === "red" ? "白方" : "黑方";
+    }
+
+    return camp === "red" ? "红方" : "黑方";
+  }
 }
+
+
+

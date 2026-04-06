@@ -1,31 +1,29 @@
-import Draw from "./Draw";
+﻿import Draw from "./Draw";
 import {
-  createInitialGame,
   getLegalMoves,
   getPieceAtPosition,
+  type ChineseChessGameState,
   type Position,
   type RoomSnapshot,
   type SeatCamp,
-  type SerializedGameState,
 } from "@chess/game-core";
+import type { BoardMoveIntent, GameBoard } from "../shared/board";
 
 interface BoardOption {
   id: string;
 }
-
-type SubmitMoveHandler = (pieceId: string, position: Position) => void;
 
 type HighlightTarget = {
   id: string;
   position: Position;
 };
 
-class Board {
+class Board implements GameBoard {
   draw: Draw;
-  game?: SerializedGameState;
+  game?: ChineseChessGameState;
   curGamer: SeatCamp;
   selectedPieceId?: string;
-  submitMove?: SubmitMoveHandler;
+  submitMove?: (move: BoardMoveIntent) => void;
 
   constructor(option: BoardOption) {
     this.draw = new Draw(option.id);
@@ -40,7 +38,7 @@ class Board {
   }
 
   drawPieces() {
-    for (const piece of createInitialGame().pieces) {
+    for (const piece of this.draw.initialPieces()) {
       this.draw.drawChess(piece.label, piece.camp, piece.id);
     }
   }
@@ -59,6 +57,10 @@ class Board {
   }
 
   setSnapshot(snapshot: RoomSnapshot) {
+    if (snapshot.game.gameType !== "chinese-chess") {
+      return;
+    }
+
     this.game = snapshot.game;
     this.curGamer = snapshot.selfCamp;
     this.selectedPieceId = undefined;
@@ -69,6 +71,10 @@ class Board {
 
   setCameraPosition(type: string) {
     this.draw.flyTo(type, this.curGamer);
+  }
+
+  destroy() {
+    this.draw.destroy();
   }
 
   private syncPieces() {
@@ -124,7 +130,11 @@ class Board {
       return;
     }
 
-    this.submitMove(this.selectedPieceId, position);
+    this.submitMove({
+      gameType: "chinese-chess",
+      pieceId: this.selectedPieceId,
+      to: position,
+    });
   }
 
   private showLegalMoves(pieceId: string) {

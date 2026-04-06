@@ -1,7 +1,9 @@
+﻿export type GameType = "chinese-chess" | "gobang";
 export type Camp = "red" | "black";
 export type SeatCamp = Camp | "viewer";
 export type Position = [number, number];
 export type GameStatus = "waiting" | "playing" | "finished";
+
 export type PieceRole =
   | "general"
   | "advisor"
@@ -10,15 +12,16 @@ export type PieceRole =
   | "rook"
   | "cannon"
   | "soldier";
+
 export type PieceLabel =
-  | "帥"
+  | "帅"
   | "将"
   | "仕"
   | "士"
   | "相"
   | "象"
-  | "馬"
-  | "車"
+  | "马"
+  | "车"
   | "炮"
   | "兵"
   | "卒";
@@ -33,288 +36,93 @@ export interface PieceState {
   alive: boolean;
 }
 
-export interface GameState {
+export interface ChineseChessGameState {
+  gameType: "chinese-chess";
   status: GameStatus;
   turn: Camp;
   winner: Camp | null;
   pieces: PieceState[];
 }
 
+export interface GobangMove {
+  moveNumber: number;
+  camp: Camp;
+  position: Position;
+}
+
+export interface GobangGameState {
+  gameType: "gobang";
+  status: GameStatus;
+  turn: Camp;
+  winner: Camp | "draw" | null;
+  size: number;
+  moves: GobangMove[];
+}
+
+export type GameState = ChineseChessGameState | GobangGameState;
 export type SerializedGameState = GameState;
 
-export type ApplyMoveResult =
+type CommonMoveErrorCode = "GAME_NOT_ACTIVE" | "NOT_YOUR_TURN" | "ILLEGAL_MOVE";
+
+export type ChineseChessMoveErrorCode = CommonMoveErrorCode | "PIECE_NOT_FOUND";
+export type GobangMoveErrorCode = CommonMoveErrorCode | "CELL_OCCUPIED";
+
+export type ApplyMoveResult<TGame extends GameState, TErrorCode extends string> =
   | {
       ok: true;
-      game: GameState;
+      game: TGame;
       capturedPieceId: string | null;
-      winner: Camp | null;
+      winner: TGame["winner"];
     }
   | {
       ok: false;
-      code: "GAME_NOT_ACTIVE" | "NOT_YOUR_TURN" | "PIECE_NOT_FOUND" | "ILLEGAL_MOVE";
+      code: TErrorCode;
       message: string;
     };
 
-const BOARD_WIDTH = 9;
-const BOARD_HEIGHT = 10;
+export type ApplyChineseChessMoveResult = ApplyMoveResult<
+  ChineseChessGameState,
+  ChineseChessMoveErrorCode
+>;
+export type ApplyGobangMoveResult = ApplyMoveResult<GobangGameState, GobangMoveErrorCode>;
+
+const CHINESE_CHESS_BOARD_WIDTH = 9;
+const CHINESE_CHESS_BOARD_HEIGHT = 10;
+const GOBANG_BOARD_SIZE = 15;
 
 const INITIAL_PIECES: Array<Omit<PieceState, "alive" | "position"> & { position: Position }> = [
-  {
-    id: "red_帥_0",
-    role: "general",
-    label: "帥",
-    camp: "red",
-    index: 0,
-    position: [4, 0],
-  },
-  {
-    id: "black_将_0",
-    role: "general",
-    label: "将",
-    camp: "black",
-    index: 0,
-    position: [4, 9],
-  },
-  {
-    id: "red_仕_0",
-    role: "advisor",
-    label: "仕",
-    camp: "red",
-    index: 0,
-    position: [3, 0],
-  },
-  {
-    id: "black_士_0",
-    role: "advisor",
-    label: "士",
-    camp: "black",
-    index: 0,
-    position: [3, 9],
-  },
-  {
-    id: "red_仕_1",
-    role: "advisor",
-    label: "仕",
-    camp: "red",
-    index: 1,
-    position: [5, 0],
-  },
-  {
-    id: "black_士_1",
-    role: "advisor",
-    label: "士",
-    camp: "black",
-    index: 1,
-    position: [5, 9],
-  },
-  {
-    id: "red_相_0",
-    role: "elephant",
-    label: "相",
-    camp: "red",
-    index: 0,
-    position: [2, 0],
-  },
-  {
-    id: "black_象_0",
-    role: "elephant",
-    label: "象",
-    camp: "black",
-    index: 0,
-    position: [2, 9],
-  },
-  {
-    id: "red_相_1",
-    role: "elephant",
-    label: "相",
-    camp: "red",
-    index: 1,
-    position: [6, 0],
-  },
-  {
-    id: "black_象_1",
-    role: "elephant",
-    label: "象",
-    camp: "black",
-    index: 1,
-    position: [6, 9],
-  },
-  {
-    id: "red_馬_0",
-    role: "horse",
-    label: "馬",
-    camp: "red",
-    index: 0,
-    position: [1, 0],
-  },
-  {
-    id: "black_馬_0",
-    role: "horse",
-    label: "馬",
-    camp: "black",
-    index: 0,
-    position: [1, 9],
-  },
-  {
-    id: "red_馬_1",
-    role: "horse",
-    label: "馬",
-    camp: "red",
-    index: 1,
-    position: [7, 0],
-  },
-  {
-    id: "black_馬_1",
-    role: "horse",
-    label: "馬",
-    camp: "black",
-    index: 1,
-    position: [7, 9],
-  },
-  {
-    id: "red_車_0",
-    role: "rook",
-    label: "車",
-    camp: "red",
-    index: 0,
-    position: [0, 0],
-  },
-  {
-    id: "black_車_0",
-    role: "rook",
-    label: "車",
-    camp: "black",
-    index: 0,
-    position: [0, 9],
-  },
-  {
-    id: "red_車_1",
-    role: "rook",
-    label: "車",
-    camp: "red",
-    index: 1,
-    position: [8, 0],
-  },
-  {
-    id: "black_車_1",
-    role: "rook",
-    label: "車",
-    camp: "black",
-    index: 1,
-    position: [8, 9],
-  },
-  {
-    id: "red_炮_0",
-    role: "cannon",
-    label: "炮",
-    camp: "red",
-    index: 0,
-    position: [1, 2],
-  },
-  {
-    id: "black_炮_0",
-    role: "cannon",
-    label: "炮",
-    camp: "black",
-    index: 0,
-    position: [1, 7],
-  },
-  {
-    id: "red_炮_1",
-    role: "cannon",
-    label: "炮",
-    camp: "red",
-    index: 1,
-    position: [7, 2],
-  },
-  {
-    id: "black_炮_1",
-    role: "cannon",
-    label: "炮",
-    camp: "black",
-    index: 1,
-    position: [7, 7],
-  },
-  {
-    id: "red_兵_0",
-    role: "soldier",
-    label: "兵",
-    camp: "red",
-    index: 0,
-    position: [0, 3],
-  },
-  {
-    id: "black_卒_0",
-    role: "soldier",
-    label: "卒",
-    camp: "black",
-    index: 0,
-    position: [0, 6],
-  },
-  {
-    id: "red_兵_1",
-    role: "soldier",
-    label: "兵",
-    camp: "red",
-    index: 1,
-    position: [2, 3],
-  },
-  {
-    id: "black_卒_1",
-    role: "soldier",
-    label: "卒",
-    camp: "black",
-    index: 1,
-    position: [2, 6],
-  },
-  {
-    id: "red_兵_2",
-    role: "soldier",
-    label: "兵",
-    camp: "red",
-    index: 2,
-    position: [4, 3],
-  },
-  {
-    id: "black_卒_2",
-    role: "soldier",
-    label: "卒",
-    camp: "black",
-    index: 2,
-    position: [4, 6],
-  },
-  {
-    id: "red_兵_3",
-    role: "soldier",
-    label: "兵",
-    camp: "red",
-    index: 3,
-    position: [6, 3],
-  },
-  {
-    id: "black_卒_3",
-    role: "soldier",
-    label: "卒",
-    camp: "black",
-    index: 3,
-    position: [6, 6],
-  },
-  {
-    id: "red_兵_4",
-    role: "soldier",
-    label: "兵",
-    camp: "red",
-    index: 4,
-    position: [8, 3],
-  },
-  {
-    id: "black_卒_4",
-    role: "soldier",
-    label: "卒",
-    camp: "black",
-    index: 4,
-    position: [8, 6],
-  },
+  { id: "red_帅_0", role: "general", label: "帅", camp: "red", index: 0, position: [4, 0] },
+  { id: "black_将_0", role: "general", label: "将", camp: "black", index: 0, position: [4, 9] },
+  { id: "red_仕_0", role: "advisor", label: "仕", camp: "red", index: 0, position: [3, 0] },
+  { id: "black_士_0", role: "advisor", label: "士", camp: "black", index: 0, position: [3, 9] },
+  { id: "red_仕_1", role: "advisor", label: "仕", camp: "red", index: 1, position: [5, 0] },
+  { id: "black_士_1", role: "advisor", label: "士", camp: "black", index: 1, position: [5, 9] },
+  { id: "red_相_0", role: "elephant", label: "相", camp: "red", index: 0, position: [2, 0] },
+  { id: "black_象_0", role: "elephant", label: "象", camp: "black", index: 0, position: [2, 9] },
+  { id: "red_相_1", role: "elephant", label: "相", camp: "red", index: 1, position: [6, 0] },
+  { id: "black_象_1", role: "elephant", label: "象", camp: "black", index: 1, position: [6, 9] },
+  { id: "red_马_0", role: "horse", label: "马", camp: "red", index: 0, position: [1, 0] },
+  { id: "black_马_0", role: "horse", label: "马", camp: "black", index: 0, position: [1, 9] },
+  { id: "red_马_1", role: "horse", label: "马", camp: "red", index: 1, position: [7, 0] },
+  { id: "black_马_1", role: "horse", label: "马", camp: "black", index: 1, position: [7, 9] },
+  { id: "red_车_0", role: "rook", label: "车", camp: "red", index: 0, position: [0, 0] },
+  { id: "black_车_0", role: "rook", label: "车", camp: "black", index: 0, position: [0, 9] },
+  { id: "red_车_1", role: "rook", label: "车", camp: "red", index: 1, position: [8, 0] },
+  { id: "black_车_1", role: "rook", label: "车", camp: "black", index: 1, position: [8, 9] },
+  { id: "red_炮_0", role: "cannon", label: "炮", camp: "red", index: 0, position: [1, 2] },
+  { id: "black_炮_0", role: "cannon", label: "炮", camp: "black", index: 0, position: [1, 7] },
+  { id: "red_炮_1", role: "cannon", label: "炮", camp: "red", index: 1, position: [7, 2] },
+  { id: "black_炮_1", role: "cannon", label: "炮", camp: "black", index: 1, position: [7, 7] },
+  { id: "red_兵_0", role: "soldier", label: "兵", camp: "red", index: 0, position: [0, 3] },
+  { id: "black_卒_0", role: "soldier", label: "卒", camp: "black", index: 0, position: [0, 6] },
+  { id: "red_兵_1", role: "soldier", label: "兵", camp: "red", index: 1, position: [2, 3] },
+  { id: "black_卒_1", role: "soldier", label: "卒", camp: "black", index: 1, position: [2, 6] },
+  { id: "red_兵_2", role: "soldier", label: "兵", camp: "red", index: 2, position: [4, 3] },
+  { id: "black_卒_2", role: "soldier", label: "卒", camp: "black", index: 2, position: [4, 6] },
+  { id: "red_兵_3", role: "soldier", label: "兵", camp: "red", index: 3, position: [6, 3] },
+  { id: "black_卒_3", role: "soldier", label: "卒", camp: "black", index: 3, position: [6, 6] },
+  { id: "red_兵_4", role: "soldier", label: "兵", camp: "red", index: 4, position: [8, 3] },
+  { id: "black_卒_4", role: "soldier", label: "卒", camp: "black", index: 4, position: [8, 6] },
 ];
 
 const HORSE_STEPS = [
@@ -335,6 +143,13 @@ const DIRECTIONS = [
   [0, -1],
 ] as const;
 
+const GOBANG_WIN_DIRECTIONS = [
+  [1, 0],
+  [0, 1],
+  [1, 1],
+  [1, -1],
+] as const;
+
 function clonePosition(position: Position): Position {
   return [position[0], position[1]];
 }
@@ -350,12 +165,21 @@ function positionKey(position: Position) {
   return `${position[0]},${position[1]}`;
 }
 
-function isInsideBoard(position: Position) {
+function isInsideChineseChessBoard(position: Position) {
   return (
     position[0] >= 0 &&
-    position[0] < BOARD_WIDTH &&
+    position[0] < CHINESE_CHESS_BOARD_WIDTH &&
     position[1] >= 0 &&
-    position[1] < BOARD_HEIGHT
+    position[1] < CHINESE_CHESS_BOARD_HEIGHT
+  );
+}
+
+function isInsideGobangBoard(position: Position) {
+  return (
+    position[0] >= 0 &&
+    position[0] < GOBANG_BOARD_SIZE &&
+    position[1] >= 0 &&
+    position[1] < GOBANG_BOARD_SIZE
   );
 }
 
@@ -377,12 +201,16 @@ function hasCrossedRiver(piece: PieceState) {
   return piece.camp === "red" ? piece.position[1] > 4 : piece.position[1] < 5;
 }
 
-function getAlivePieces(game: GameState) {
+function getAlivePieces(game: ChineseChessGameState) {
   return game.pieces.filter((piece) => piece.alive);
 }
 
-function getOccupancy(game: GameState) {
+function getOccupancy(game: ChineseChessGameState) {
   return new Map(getAlivePieces(game).map((piece) => [positionKey(piece.position), piece]));
+}
+
+function getGobangOccupancy(game: GobangGameState) {
+  return new Map(game.moves.map((move) => [positionKey(move.position), move.camp]));
 }
 
 function getOffsetPosition(origin: Position, delta: readonly [number, number]): Position {
@@ -396,12 +224,11 @@ function filterOwnPieceTarget(
 ) {
   return positions.filter((position) => {
     const target = occupancy.get(positionKey(position));
-
     return !target || target.camp !== piece.camp;
   });
 }
 
-function getLineMoves(game: GameState, piece: PieceState, mode: "rook" | "cannon") {
+function getLineMoves(game: ChineseChessGameState, piece: PieceState, mode: "rook" | "cannon") {
   const occupancy = getOccupancy(game);
   const results: Position[] = [];
 
@@ -409,7 +236,7 @@ function getLineMoves(game: GameState, piece: PieceState, mode: "rook" | "cannon
     let cursor = getOffsetPosition(piece.position, direction);
     let screenFound = false;
 
-    while (isInsideBoard(cursor)) {
+    while (isInsideChineseChessBoard(cursor)) {
       const target = occupancy.get(positionKey(cursor));
 
       if (mode === "rook") {
@@ -466,7 +293,7 @@ function getAdvisorMoves(piece: PieceState, occupancy: Map<string, PieceState>) 
   );
 }
 
-function getElephantMoves(game: GameState, piece: PieceState) {
+function getElephantMoves(game: ChineseChessGameState, piece: PieceState) {
   const occupancy = getOccupancy(game);
   const candidates: Position[] = [];
   const deltas: Array<readonly [number, number]> = [
@@ -480,7 +307,7 @@ function getElephantMoves(game: GameState, piece: PieceState) {
     const target = getOffsetPosition(piece.position, delta);
     const block = [piece.position[0] + delta[0] / 2, piece.position[1] + delta[1] / 2] as Position;
 
-    if (!isInsideBoard(target) || !isOwnSide(piece.camp, target)) {
+    if (!isInsideChineseChessBoard(target) || !isOwnSide(piece.camp, target)) {
       continue;
     }
 
@@ -494,7 +321,7 @@ function getElephantMoves(game: GameState, piece: PieceState) {
   return filterOwnPieceTarget(occupancy, piece, candidates);
 }
 
-function getHorseMoves(game: GameState, piece: PieceState) {
+function getHorseMoves(game: ChineseChessGameState, piece: PieceState) {
   const occupancy = getOccupancy(game);
   const candidates: Position[] = [];
 
@@ -507,7 +334,7 @@ function getHorseMoves(game: GameState, piece: PieceState) {
 
     const target = getOffsetPosition(piece.position, step.to);
 
-    if (isInsideBoard(target)) {
+    if (isInsideChineseChessBoard(target)) {
       candidates.push(target);
     }
   }
@@ -515,7 +342,7 @@ function getHorseMoves(game: GameState, piece: PieceState) {
   return filterOwnPieceTarget(occupancy, piece, candidates);
 }
 
-function getSoldierMoves(game: GameState, piece: PieceState) {
+function getSoldierMoves(game: ChineseChessGameState, piece: PieceState) {
   const occupancy = getOccupancy(game);
   const candidates: Position[] = [];
   const forward = piece.camp === "red" ? 1 : -1;
@@ -530,8 +357,25 @@ function getSoldierMoves(game: GameState, piece: PieceState) {
   return filterOwnPieceTarget(
     occupancy,
     piece,
-    candidates.filter((position) => isInsideBoard(position)),
+    candidates.filter((position) => isInsideChineseChessBoard(position)),
   );
+}
+
+function countLine(
+  occupancy: Map<string, Camp>,
+  camp: Camp,
+  position: Position,
+  delta: readonly [number, number],
+) {
+  let count = 0;
+  let cursor: Position = [position[0] + delta[0], position[1] + delta[1]];
+
+  while (isInsideGobangBoard(cursor) && occupancy.get(positionKey(cursor)) === camp) {
+    count += 1;
+    cursor = [cursor[0] + delta[0], cursor[1] + delta[1]];
+  }
+
+  return count;
 }
 
 export function createInitialPieces() {
@@ -542,8 +386,9 @@ export function createInitialPieces() {
   }));
 }
 
-export function createInitialGame(): GameState {
+export function createInitialChineseChessGame(): ChineseChessGameState {
   return {
+    gameType: "chinese-chess",
     status: "waiting",
     turn: "red",
     winner: null,
@@ -551,30 +396,53 @@ export function createInitialGame(): GameState {
   };
 }
 
-export function resetGame() {
-  return createInitialGame();
-}
-
-export function serializeGame(game: GameState): SerializedGameState {
+export function createInitialGobangGame(): GobangGameState {
   return {
-    status: game.status,
-    turn: game.turn,
-    winner: game.winner,
-    pieces: game.pieces.map(clonePiece),
+    gameType: "gobang",
+    status: "waiting",
+    turn: "black",
+    winner: null,
+    size: GOBANG_BOARD_SIZE,
+    moves: [],
   };
 }
 
-export function getPieceById(game: GameState, pieceId: string) {
+export function createInitialGame(gameType: GameType = "chinese-chess"): GameState {
+  return gameType === "gobang" ? createInitialGobangGame() : createInitialChineseChessGame();
+}
+
+export function resetGame(gameType: GameType = "chinese-chess") {
+  return createInitialGame(gameType);
+}
+
+export function serializeGame<TGame extends GameState>(game: TGame): TGame {
+  if (game.gameType === "gobang") {
+    return {
+      ...game,
+      moves: game.moves.map((move) => ({
+        ...move,
+        position: clonePosition(move.position),
+      })),
+    } as TGame;
+  }
+
+  return {
+    ...game,
+    pieces: game.pieces.map(clonePiece),
+  } as TGame;
+}
+
+export function getPieceById(game: ChineseChessGameState, pieceId: string) {
   return game.pieces.find((piece) => piece.id === pieceId);
 }
 
-export function getPieceAtPosition(game: GameState, position: Position) {
+export function getPieceAtPosition(game: ChineseChessGameState, position: Position) {
   return getAlivePieces(game).find(
     (piece) => piece.position[0] === position[0] && piece.position[1] === position[1],
   );
 }
 
-export function getLegalMoves(game: GameState, pieceId: string): Position[] {
+export function getLegalMoves(game: ChineseChessGameState, pieceId: string): Position[] {
   const piece = getPieceById(game, pieceId);
 
   if (!piece || !piece.alive) {
@@ -603,8 +471,8 @@ export function getLegalMoves(game: GameState, pieceId: string): Position[] {
   }
 }
 
-export function getWinner(game: GameState): Camp | null {
-  const redGeneral = getPieceById(game, "red_帥_0");
+export function getWinner(game: ChineseChessGameState): Camp | null {
+  const redGeneral = getPieceById(game, "red_帅_0");
   const blackGeneral = getPieceById(game, "black_将_0");
 
   if (redGeneral && !redGeneral.alive) {
@@ -618,7 +486,37 @@ export function getWinner(game: GameState): Camp | null {
   return null;
 }
 
-export function applyMove(game: GameState, pieceId: string, to: Position): ApplyMoveResult {
+export function getGobangWinner(game: GobangGameState): Camp | "draw" | null {
+  if (game.moves.length === 0) {
+    return null;
+  }
+
+  const occupancy = getGobangOccupancy(game);
+  const lastMove = game.moves[game.moves.length - 1];
+
+  for (const direction of GOBANG_WIN_DIRECTIONS) {
+    const count =
+      1 +
+      countLine(occupancy, lastMove.camp, lastMove.position, direction) +
+      countLine(occupancy, lastMove.camp, lastMove.position, [-direction[0], -direction[1]]);
+
+    if (count >= 5) {
+      return lastMove.camp;
+    }
+  }
+
+  if (game.moves.length >= game.size * game.size) {
+    return "draw";
+  }
+
+  return null;
+}
+
+export function applyChineseChessMove(
+  game: ChineseChessGameState,
+  pieceId: string,
+  to: Position,
+): ApplyChineseChessMoveResult {
   if (game.status !== "playing") {
     return {
       ok: false,
@@ -683,4 +581,53 @@ export function applyMove(game: GameState, pieceId: string, to: Position): Apply
     capturedPieceId: capturedPiece?.id ?? null,
     winner: nextGame.winner,
   };
+}
+
+export function applyGobangMove(game: GobangGameState, to: Position): ApplyGobangMoveResult {
+  if (game.status !== "playing") {
+    return {
+      ok: false,
+      code: "GAME_NOT_ACTIVE",
+      message: "棋局尚未开始或已经结束",
+    };
+  }
+
+  if (!isInsideGobangBoard(to)) {
+    return {
+      ok: false,
+      code: "ILLEGAL_MOVE",
+      message: "落子位置超出棋盘范围",
+    };
+  }
+
+  if (getGobangOccupancy(game).has(positionKey(to))) {
+    return {
+      ok: false,
+      code: "CELL_OCCUPIED",
+      message: "该位置已有棋子",
+    };
+  }
+
+  const nextGame = serializeGame(game);
+
+  nextGame.moves.push({
+    moveNumber: nextGame.moves.length + 1,
+    camp: game.turn,
+    position: clonePosition(to),
+  });
+
+  nextGame.winner = getGobangWinner(nextGame);
+  nextGame.status = nextGame.winner ? "finished" : "playing";
+  nextGame.turn = game.turn === "red" ? "black" : "red";
+
+  return {
+    ok: true,
+    game: nextGame,
+    capturedPieceId: null,
+    winner: nextGame.winner,
+  };
+}
+
+export function applyMove(game: ChineseChessGameState, pieceId: string, to: Position) {
+  return applyChineseChessMove(game, pieceId, to);
 }
