@@ -3,7 +3,6 @@
   AxesHelper,
   BoxGeometry,
   BufferGeometry,
-  Camera,
   Color,
   DirectionalLight,
   DoubleSide,
@@ -34,10 +33,12 @@ interface HighlightTarget {
 
 export default class Draw {
   scene: Scene;
-  camera: Camera;
+  camera: PerspectiveCamera;
   boardGroup: Group;
   renderer: WebGLRenderer;
   controls: OrbitControls;
+  container: HTMLElement;
+  resizeObserver?: ResizeObserver;
   lineWidth: number;
   _lineMaterial: Material;
   chessGroup: Group;
@@ -48,11 +49,12 @@ export default class Draw {
   _tweenGroup?: TWEEN.Group;
 
   constructor(id: string) {
-    const { scene, camera, renderer, controls, boardGroup, chessGroup } = this.initScene(id);
+    const { scene, camera, renderer, controls, boardGroup, chessGroup, container } = this.initScene(id);
     this.scene = scene;
     this.camera = camera;
     this.renderer = renderer;
     this.controls = controls;
+    this.container = container;
     this.boardGroup = boardGroup;
     this.chessGroup = chessGroup;
     this._rangeGroup = new Group();
@@ -64,7 +66,18 @@ export default class Draw {
     });
     this._chessRotation = false;
     this.initSceneEvent();
+    this.initResizeObserver();
   }
+
+  private handleResize = () => {
+    const width = Math.max(this.container.clientWidth, 1);
+    const height = Math.max(this.container.clientHeight, 1);
+
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setSize(width, height);
+  };
 
   initialPieces() {
     return createInitialPieces();
@@ -76,7 +89,7 @@ export default class Draw {
     const scene = new Scene();
     scene.background = new Color("rgb(200,200,200)");
 
-    const camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+    const camera = new PerspectiveCamera(60, container.offsetWidth / container.offsetHeight, 1, 1000);
     camera.updateProjectionMatrix();
     scene.add(camera);
     camera.position.set(0, 85, 55);
@@ -123,7 +136,22 @@ export default class Draw {
       controls,
       boardGroup,
       chessGroup,
+      container,
     };
+  }
+
+  initResizeObserver() {
+    this.handleResize();
+    window.addEventListener("resize", this.handleResize);
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.handleResize();
+    });
+    this.resizeObserver.observe(this.container);
   }
 
   initSceneEvent() {
@@ -383,19 +411,25 @@ export default class Draw {
     }
   }
 
-  setChessRotation(camp: "red" | "black" | "viewer") {
+  syncCampOrientation(camp: "red" | "black" | "viewer") {
     this._originRotation = 0;
 
     if (camp === "black") {
       this._rotateChessText(true);
-      this.camera.position.set(0, 85, -55);
-      this.controls.update();
       return;
     }
 
     this._rotateChessText(false);
-    this.camera.position.set(0, 85, 55);
+  }
+
+  resetCameraToFront(camp: "red" | "black" | "viewer") {
+    this.camera.position.set(0, 85, camp === "black" ? -55 : 55);
     this.controls.update();
+  }
+
+  setChessRotation(camp: "red" | "black" | "viewer") {
+    this.syncCampOrientation(camp);
+    this.resetCameraToFront(camp);
   }
 
   setPosition(name: string, position: [number, number]) {
@@ -468,6 +502,8 @@ export default class Draw {
   }
 
   destroy() {
+    this.resizeObserver?.disconnect();
+    window.removeEventListener("resize", this.handleResize);
     this.renderer.setAnimationLoop(null);
     this.controls.dispose();
     this.renderer.dispose();

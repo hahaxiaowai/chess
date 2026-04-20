@@ -35,6 +35,8 @@ export default class Draw {
   camera: PerspectiveCamera;
   renderer: WebGLRenderer;
   controls: OrbitControls;
+  container: HTMLElement;
+  resizeObserver?: ResizeObserver;
   boardGroup: Group;
   pieceGroup: Group;
   highlightGroup: Group;
@@ -49,6 +51,7 @@ export default class Draw {
       throw new Error("pass container id");
     }
 
+    this.container = container;
     this.scene = new Scene();
     this.scene.background = new Color("#ebe2c7");
     this.camera = new PerspectiveCamera(55, container.offsetWidth / container.offsetHeight, 1, 1000);
@@ -75,12 +78,37 @@ export default class Draw {
     this.pieceMap = new Map();
     this.tweenGroup = new TWEEN.Group();
     this.intersectionPlane = new Plane(new Vector3(0, 1, 0), 0);
+    this.initResizeObserver();
 
     this.renderer.setAnimationLoop(() => {
       this.controls.update();
       this.tweenGroup.update();
       this.renderer.render(this.scene, this.camera);
     });
+  }
+
+  private handleResize = () => {
+    const width = Math.max(this.container.clientWidth, 1);
+    const height = Math.max(this.container.clientHeight, 1);
+
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setSize(width, height);
+  };
+
+  private initResizeObserver() {
+    this.handleResize();
+    window.addEventListener("resize", this.handleResize);
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+
+    this.resizeObserver = new ResizeObserver(() => {
+      this.handleResize();
+    });
+    this.resizeObserver.observe(this.container);
   }
 
   drawBoard() {
@@ -211,12 +239,18 @@ export default class Draw {
     tween.onComplete(() => tween.remove());
   }
 
-  setSide(camp: Camp | "viewer") {
+  resetCameraToFront(camp: Camp | "viewer") {
     this.camera.position.set(0, 72, camp === "black" ? -44 : 44);
     this.controls.update();
   }
 
+  setSide(camp: Camp | "viewer") {
+    this.resetCameraToFront(camp);
+  }
+
   destroy() {
+    this.resizeObserver?.disconnect();
+    window.removeEventListener("resize", this.handleResize);
     this.renderer.setAnimationLoop(null);
     this.controls.dispose();
     this.renderer.dispose();

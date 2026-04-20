@@ -10,11 +10,13 @@ class Board implements GameBoard {
   draw: Draw;
   game?: GobangGameState;
   curGamer: SeatCamp;
+  hasAutoOriented: boolean;
   submitMove?: (move: BoardMoveIntent) => void;
 
   constructor(option: BoardOption) {
     this.draw = new Draw(option.id);
     this.curGamer = "viewer";
+    this.hasAutoOriented = false;
     this.draw.drawBoard();
     this.draw.initEvent((position) => {
       if (!this.canOperate() || !this.submitMove) {
@@ -31,9 +33,15 @@ class Board implements GameBoard {
       return;
     }
 
+    const shouldAutoOrient = !this.hasAutoOriented || this.curGamer !== snapshot.selfCamp;
     this.game = snapshot.game;
     this.curGamer = snapshot.selfCamp;
-    this.draw.setSide(this.curGamer);
+
+    if (shouldAutoOrient) {
+      this.draw.resetCameraToFront(this.curGamer);
+      this.hasAutoOriented = true;
+    }
+
     this.draw.syncPieces(
       snapshot.game.moves.map((move) => ({
         id: `move-${move.moveNumber}`,
