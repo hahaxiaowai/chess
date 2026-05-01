@@ -41,6 +41,7 @@ export interface ChineseChessGameState {
   status: GameStatus;
   turn: Camp;
   winner: Camp | null;
+  check: Record<Camp, boolean>;
   pieces: PieceState[];
 }
 
@@ -69,16 +70,16 @@ export type GobangMoveErrorCode = CommonMoveErrorCode | "CELL_OCCUPIED";
 
 export type ApplyMoveResult<TGame extends GameState, TErrorCode extends string> =
   | {
-      ok: true;
-      game: TGame;
-      capturedPieceId: string | null;
-      winner: TGame["winner"];
-    }
+    ok: true;
+    game: TGame;
+    capturedPieceId: string | null;
+    winner: TGame["winner"];
+  }
   | {
-      ok: false;
-      code: TErrorCode;
-      message: string;
-    };
+    ok: false;
+    code: TErrorCode;
+    message: string;
+  };
 
 export type ApplyChineseChessMoveResult = ApplyMoveResult<
   ChineseChessGameState,
@@ -215,6 +216,14 @@ function getGobangOccupancy(game: GobangGameState) {
 
 function getOffsetPosition(origin: Position, delta: readonly [number, number]): Position {
   return [origin[0] + delta[0], origin[1] + delta[1]];
+}
+
+function isSamePosition(left: Position, right: Position) {
+  return left[0] === right[0] && left[1] === right[1];
+}
+
+function getOppositeCamp(camp: Camp): Camp {
+  return camp === "red" ? "black" : "red";
 }
 
 function filterOwnPieceTarget(
@@ -361,6 +370,101 @@ function getSoldierMoves(game: ChineseChessGameState, piece: PieceState) {
   );
 }
 
+function getGeneralPiece(game: ChineseChessGameState, camp: Camp) {
+  return game.pieces.find((piece) => piece.alive && piece.role === "general" && piece.camp === camp);
+}
+
+function areGeneralsFacing(game: ChineseChessGameState) {
+  const redGeneral = getGeneralPiece(game, "red");
+  const blackGeneral = getGeneralPiece(game, "black");
+
+  if (!redGeneral || !blackGeneral || redGeneral.position[0] !== blackGeneral.position[0]) {
+    return false;
+  }
+
+  const file = redGeneral.position[0];
+  const minY = Math.min(redGeneral.position[1], blackGeneral.position[1]) + 1;
+  const maxY = Math.max(redGeneral.position[1], blackGeneral.position[1]);
+
+  for (const piece of getAlivePieces(game)) {
+    if (piece.id === redGeneral.id || piece.id === blackGeneral.id) {
+      continue;
+    }
+
+    if (piece.position[0] === file && piece.position[1] >= minY && piece.position[1] < maxY) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function getPseudoLegalMoves(game: ChineseChessGameState, piece: PieceState): Position[] {
+  const occupancy = getOccupancy(game);
+
+  switch (piece.role) {
+    case "general":
+      return getGeneralMoves(piece, occupancy);
+    case "advisor":
+      return getAdvisorMoves(piece, occupancy);
+    case "elephant":
+      return getElephantMoves(game, piece);
+    case "horse":
+      return getHorseMoves(game, piece);
+    case "rook":
+      return getLineMoves(game, piece, "rook");
+    case "cannon":
+      return getLineMoves(game, piece, "cannon");
+    case "soldier":
+      return getSoldierMoves(game, piece);
+    default:
+      return [];
+  }
+}
+
+function applySimulatedMove(game: ChineseChessGameState, pieceId: string, to: Position) {
+  const nextGame = serializeGame(game);
+  const nextPiece = getPieceById(nextGame, pieceId);
+
+  if (!nextPiece || !nextPiece.alive) {
+    return nextGame;
+  }
+
+  const capturedPiece = getPieceAtPosition(nextGame, to);
+
+  if (capturedPiece) {
+    capturedPiece.alive = false;
+  }
+
+  nextPiece.position = clonePosition(to);
+  return nextGame;
+}
+
+export function isCampInCheck(game: ChineseChessGameState, camp: Camp) {
+  const general = getGeneralPiece(game, camp);
+
+  if (!general) {
+    return false;
+  }
+
+  if (areGeneralsFacing(game)) {
+    return true;
+  }
+
+  const opponentCamp = getOppositeCamp(camp);
+
+  return getAlivePieces(game)
+    .filter((piece) => piece.camp === opponentCamp)
+    .some((piece) => getPseudoLegalMoves(game, piece).some((position) => isSamePosition(position, general.position)));
+}
+
+export function getCheckState(game: ChineseChessGameState): Record<Camp, boolean> {
+  return {
+    red: isCampInCheck(game, "red"),
+    black: isCampInCheck(game, "black"),
+  };
+}
+
 function countLine(
   occupancy: Map<string, Camp>,
   camp: Camp,
@@ -392,6 +496,7 @@ export function createInitialChineseChessGame(): ChineseChessGameState {
     status: "waiting",
     turn: "red",
     winner: null,
+    check: { red: false, black: false },
     pieces: createInitialPieces(),
   };
 }
@@ -428,6 +533,7 @@ export function serializeGame<TGame extends GameState>(game: TGame): TGame {
 
   return {
     ...game,
+    check: { ...game.check },
     pieces: game.pieces.map(clonePiece),
   } as TGame;
 }
@@ -449,26 +555,10 @@ export function getLegalMoves(game: ChineseChessGameState, pieceId: string): Pos
     return [];
   }
 
-  const occupancy = getOccupancy(game);
-
-  switch (piece.role) {
-    case "general":
-      return getGeneralMoves(piece, occupancy);
-    case "advisor":
-      return getAdvisorMoves(piece, occupancy);
-    case "elephant":
-      return getElephantMoves(game, piece);
-    case "horse":
-      return getHorseMoves(game, piece);
-    case "rook":
-      return getLineMoves(game, piece, "rook");
-    case "cannon":
-      return getLineMoves(game, piece, "cannon");
-    case "soldier":
-      return getSoldierMoves(game, piece);
-    default:
-      return [];
-  }
+  return getPseudoLegalMoves(game, piece).filter((position) => {
+    const simulatedGame = applySimulatedMove(game, piece.id, position);
+    return !isCampInCheck(simulatedGame, piece.camp);
+  });
 }
 
 export function getWinner(game: ChineseChessGameState): Camp | null {
@@ -573,6 +663,7 @@ export function applyChineseChessMove(
   nextPiece.position = clonePosition(to);
   nextGame.turn = nextPiece.camp === "red" ? "black" : "red";
   nextGame.winner = getWinner(nextGame);
+  nextGame.check = getCheckState(nextGame);
   nextGame.status = nextGame.winner ? "finished" : "playing";
 
   return {

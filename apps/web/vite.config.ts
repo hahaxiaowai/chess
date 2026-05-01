@@ -1,18 +1,13 @@
+import path from "node:path";
 import { defineConfig } from "vite";
-import Components from "unplugin-vue-components/vite";
-import { AntDesignVueResolver } from "unplugin-vue-components/resolvers";
+import tailwindcss from "@tailwindcss/vite";
 import vue from "@vitejs/plugin-vue";
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    Components({
-      dts: "components.d.ts",
-      resolvers: [
-        AntDesignVueResolver({
-          importStyle: false,
-        }),
-      ],
-    }),
-  ],
+  plugins: [vue(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 });

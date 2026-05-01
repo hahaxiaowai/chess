@@ -2,6 +2,13 @@
 import { useRouter } from "vue-router";
 import type { GameType, SeatCamp } from "@chess/game-core";
 import Gamer from "./core/chinese-chess/Gamer";
+import {
+  defaultChineseChessThemeId,
+  isChineseChessThemeId,
+  type ChineseChessThemeId,
+} from "./core/chinese-chess/theme";
+
+const CHINESE_CHESS_THEME_KEY = "chess:theme:chinese-chess";
 
 export function getQueryByName(name: string, url = window.location.href) {
   return new URL(url).searchParams.get(name);
@@ -15,11 +22,17 @@ function parseGameType(value: string | null): GameType | null {
   return null;
 }
 
+function getStoredChineseChessTheme() {
+  const stored = window.localStorage.getItem(CHINESE_CHESS_THEME_KEY);
+  return isChineseChessThemeId(stored) ? stored : defaultChineseChessThemeId;
+}
+
 export function useConfig() {
   const camp: Ref<SeatCamp> = ref("viewer");
   const router = useRouter();
   const roomId = ref(getQueryByName("roomId") ?? "");
   const gameType = ref<GameType | null>(parseGameType(getQueryByName("gameType")));
+  const chineseChessTheme = ref<ChineseChessThemeId>(getStoredChineseChessTheme());
 
   if (!roomId.value) {
     roomId.value = Date.now().toString();
@@ -76,6 +89,11 @@ export function useConfig() {
     ensureGamer(nextGameType);
   };
 
+  const setChineseChessTheme = (nextTheme: ChineseChessThemeId) => {
+    chineseChessTheme.value = nextTheme;
+    window.localStorage.setItem(CHINESE_CHESS_THEME_KEY, nextTheme);
+  };
+
   watch(
     () => gamer.value?.roomSnapshot.value?.gameType,
     (nextGameType) => {
@@ -103,8 +121,10 @@ export function useConfig() {
     gamer,
     message,
     messageShow,
+    chineseChessTheme,
     shareUrl,
     canShareRoom,
+    setChineseChessTheme,
     selectGameType,
   };
 }

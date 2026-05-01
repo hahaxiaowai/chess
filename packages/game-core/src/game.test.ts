@@ -6,10 +6,12 @@ import {
   createInitialChineseChessGame,
   createInitialGame,
   createInitialGobangGame,
+  getCheckState,
   getGobangWinner,
   getLegalMoves,
   getPieceById,
   getWinner,
+  isCampInCheck,
   serializeGame,
   type ChineseChessGameState,
   type GobangGameState,
@@ -24,6 +26,7 @@ test("createInitialGame creates the full chinese chess layout", () => {
   assert.equal(getPieceById(game, "black_将_0")?.position.join(","), "4,9");
   assert.equal(game.turn, "red");
   assert.equal(game.status, "waiting");
+  assert.deepEqual(game.check, { red: false, black: false });
 });
 
 test("horse moves are blocked by leg pieces", () => {
@@ -41,6 +44,7 @@ test("cannon captures only after exactly one screen", () => {
     status: "playing",
     turn: "red",
     winner: null,
+    check: { red: false, black: false },
     pieces: [
       {
         id: "red_炮_0",
@@ -84,6 +88,7 @@ test("applyChineseChessMove captures pieces, flips turn, and marks winner", () =
     status: "playing",
     turn: "red",
     winner: null,
+    check: { red: false, black: false },
     pieces: [
       {
         id: "red_车_0",
@@ -127,7 +132,139 @@ test("applyChineseChessMove captures pieces, flips turn, and marks winner", () =
   assert.equal(result.game.turn, "black");
   assert.equal(result.game.status, "finished");
   assert.equal(result.game.winner, "red");
+  assert.deepEqual(result.game.check, { red: false, black: false });
   assert.equal(getWinner(result.game), "red");
+});
+
+test("check state marks the defending general when attacked", () => {
+  const game: ChineseChessGameState = {
+    gameType: "chinese-chess",
+    status: "playing",
+    turn: "red",
+    winner: null,
+    check: { red: false, black: false },
+    pieces: [
+      {
+        id: "red_帅_0",
+        role: "general",
+        label: "帅",
+        camp: "red",
+        index: 0,
+        position: [4, 0],
+        alive: true,
+      },
+      {
+        id: "black_将_0",
+        role: "general",
+        label: "将",
+        camp: "black",
+        index: 0,
+        position: [4, 9],
+        alive: true,
+      },
+      {
+        id: "red_车_0",
+        role: "rook",
+        label: "车",
+        camp: "red",
+        index: 0,
+        position: [4, 8],
+        alive: true,
+      },
+    ],
+  };
+
+  assert.equal(isCampInCheck(game, "black"), true);
+  assert.equal(isCampInCheck(game, "red"), false);
+  assert.deepEqual(getCheckState(game), { red: false, black: true });
+});
+
+test("legal moves filter out moves that leave own general in check", () => {
+  const game: ChineseChessGameState = {
+    gameType: "chinese-chess",
+    status: "playing",
+    turn: "red",
+    winner: null,
+    check: { red: false, black: false },
+    pieces: [
+      {
+        id: "red_帅_0",
+        role: "general",
+        label: "帅",
+        camp: "red",
+        index: 0,
+        position: [4, 0],
+        alive: true,
+      },
+      {
+        id: "black_将_0",
+        role: "general",
+        label: "将",
+        camp: "black",
+        index: 0,
+        position: [4, 9],
+        alive: true,
+      },
+      {
+        id: "red_车_0",
+        role: "rook",
+        label: "车",
+        camp: "red",
+        index: 0,
+        position: [4, 1],
+        alive: true,
+      },
+      {
+        id: "black_车_0",
+        role: "rook",
+        label: "车",
+        camp: "black",
+        index: 0,
+        position: [4, 8],
+        alive: true,
+      },
+    ],
+  };
+
+  const moves = getLegalMoves(game, "red_车_0").map((position) => position.join(","));
+
+  assert.ok(moves.includes("4,8"));
+  assert.ok(!moves.includes("3,1"));
+  assert.ok(!moves.includes("5,1"));
+});
+
+test("general cannot move into a facing-generals position", () => {
+  const game: ChineseChessGameState = {
+    gameType: "chinese-chess",
+    status: "playing",
+    turn: "red",
+    winner: null,
+    check: { red: false, black: false },
+    pieces: [
+      {
+        id: "red_帅_0",
+        role: "general",
+        label: "帅",
+        camp: "red",
+        index: 0,
+        position: [4, 1],
+        alive: true,
+      },
+      {
+        id: "black_将_0",
+        role: "general",
+        label: "将",
+        camp: "black",
+        index: 0,
+        position: [4, 9],
+        alive: true,
+      },
+    ],
+  };
+
+  const moves = getLegalMoves(game, "red_帅_0").map((position) => position.join(","));
+
+  assert.ok(!moves.includes("4,2"));
 });
 
 test("createInitialGobangGame initializes an empty 15x15 board", () => {

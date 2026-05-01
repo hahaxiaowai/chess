@@ -8,9 +8,11 @@ import {
   type SeatCamp,
 } from "@chess/game-core";
 import type { BoardMoveIntent, GameBoard } from "../shared/board";
+import type { ChineseChessThemeId } from "./theme";
 
 interface BoardOption {
   id: string;
+  themeId: ChineseChessThemeId;
 }
 
 type HighlightTarget = {
@@ -27,7 +29,7 @@ class Board implements GameBoard {
   submitMove?: (move: BoardMoveIntent) => void;
 
   constructor(option: BoardOption) {
-    this.draw = new Draw(option.id);
+    this.draw = new Draw(option.id, option.themeId);
     this.curGamer = "viewer";
     this.hasAutoOriented = false;
     this.initBoard();
@@ -76,6 +78,7 @@ class Board implements GameBoard {
 
     this.syncPieces();
     this.draw.clearRange();
+    this.syncCheckMarker();
   }
 
   setCameraPosition(type: string) {
@@ -95,6 +98,37 @@ class Board implements GameBoard {
       this.draw.setPosition(piece.id, piece.position);
       this.draw.setVisible(piece.id, piece.alive);
     }
+  }
+
+  private syncCheckMarker() {
+    if (!this.game) {
+      this.draw.showCheckMarker(null, []);
+      return;
+    }
+
+    const checkedCamp = this.game.check.red ? "red" : this.game.check.black ? "black" : null;
+
+    if (!checkedCamp) {
+      this.draw.showCheckMarker(null, []);
+      return;
+    }
+
+    const general = this.game.pieces.find(
+      (piece) => piece.alive && piece.role === "general" && piece.camp === checkedCamp,
+    );
+
+    const threatPositions = general
+      ? this.game.pieces
+        .filter((piece) => piece.alive && piece.camp !== checkedCamp)
+        .filter((piece) =>
+          getLegalMoves(this.game as ChineseChessGameState, piece.id).some(
+            (candidate) => candidate[0] === general.position[0] && candidate[1] === general.position[1],
+          ),
+        )
+        .map((piece) => piece.position)
+      : [];
+
+    this.draw.showCheckMarker(general?.position ?? null, threatPositions);
   }
 
   private canOperate() {

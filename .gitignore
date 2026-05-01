@@ -26,3 +26,4 @@ dist-ssr
 *.sw?
 /.env
 /.env.host
+chess-app.tar
